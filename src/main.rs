@@ -10,6 +10,25 @@ use watchout_pixls::window_render::{PixelCanvas, RetroWindowConfig};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        println!("Watchout Pixls (v{})", env!("CARGO_PKG_VERSION"));
+        println!("Modular 2D retro pixel-art open-source game built on Bevy ECS\n");
+        println!("USAGE:");
+        println!("    watchout_pixls [OPTIONS]\n");
+        println!("OPTIONS:");
+        println!("    -h, --help        Print this help message");
+        println!("    -V, --version     Print version information");
+        println!(
+            "        --headless    Run in headless mode (verification without opening a window)"
+        );
+        return;
+    }
+
+    if args.iter().any(|a| a == "--version" || a == "-V") {
+        println!("watchout_pixls {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+
     let force_headless = args.iter().any(|a| a == "--headless");
 
     let mut app = build_watchout_app();

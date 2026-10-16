@@ -56,9 +56,24 @@ impl PluginGroup for WatchoutPixlsPlugins {
             .add(ContentPlugin)
             .add(GameStatePlugin);
 
-        let default_pack = Path::new("assets/content");
-        if default_pack.exists() {
-            group = group.add(ModLoaderPlugin::new().with_content_pack_dir(default_pack));
+        let mut content_pack_dir: Option<std::path::PathBuf> = None;
+        let cwd_pack = Path::new("assets/content");
+        if cwd_pack.exists() {
+            content_pack_dir = Some(cwd_pack.to_path_buf());
+        } else if let Ok(exe) = std::env::current_exe() {
+            if let Some(exe_dir) = exe.parent() {
+                let exe_relative = exe_dir.join("assets/content");
+                let target_relative = exe_dir.join("../../assets/content");
+                if exe_relative.exists() {
+                    content_pack_dir = Some(exe_relative);
+                } else if target_relative.exists() {
+                    content_pack_dir = Some(target_relative);
+                }
+            }
+        }
+
+        if let Some(pack) = content_pack_dir {
+            group = group.add(ModLoaderPlugin::new().with_content_pack_dir(pack));
         } else {
             group = group.add(ModLoaderPlugin::new());
         }
