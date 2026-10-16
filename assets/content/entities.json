@@ -1,0 +1,12 @@
+[
+  {
+    "id": "entity.peach_wisp",
+    "display_name": "Peach Blossom Wisp",
+    "archetype": "Critter",
+    "max_health": 45,
+    "move_speed": 48.0,
+    "hostile": false,
+    "sprite_id": "sprite_peach_wisp",
+    "drop_table": ["item.sun_crystal"]
+  }
+]

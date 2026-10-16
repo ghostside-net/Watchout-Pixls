@@ -1,0 +1,20 @@
+[
+    (
+        id: "item.lavender_wand",
+        display_name: "Lavender Haze Wand",
+        category: Weapon,
+        max_stack: 1,
+        value: 250,
+        power_bonus: 14,
+        sprite_id: "sprite_lavender_wand",
+    ),
+    (
+        id: "item.sun_crystal",
+        display_name: "Buttercup Sun Crystal",
+        category: Material,
+        max_stack: 99,
+        value: 45,
+        power_bonus: 0,
+        sprite_id: "sprite_sun_crystal",
+    ),
+]

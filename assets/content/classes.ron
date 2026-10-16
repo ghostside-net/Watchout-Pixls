@@ -1,0 +1,11 @@
+[
+    (
+        id: "class.pastel_alchemist",
+        display_name: "Pastel Alchemist",
+        base_health: 85,
+        base_mana: 90,
+        base_speed: 60.0,
+        starting_items: ["item.lavender_wand", "item.berry_potion"],
+        passive_trait: "ChromaticBrew",
+    ),
+]

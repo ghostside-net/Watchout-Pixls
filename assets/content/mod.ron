@@ -1,0 +1,14 @@
+(
+    metadata: (
+        id: "mod.pastel_frontier",
+        name: "Pastel Frontier Expansion Pack",
+        version: "0.1.0",
+        author: "watchout_pixls Team",
+        description: "Sample external RON/JSON content pack for Phase 1 verification",
+    ),
+    items_files: ["items.ron"],
+    classes_files: ["classes.ron"],
+    entities_files: ["entities.json"],
+    tiles_files: ["tiles.ron"],
+    dynamic_library: None,
+)

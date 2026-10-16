@@ -1,0 +1,227 @@
+=== Agent Orchestrator Task #12 ===
+Projekt: watchout_pixls
+Validierungsbefehl: cargo test
+Maximale Iterationen: 8
+[CONFIG] Verwendetes Modell: gemini-4-argon-high
+Prompt: Wir starten ein neues Open-Source-Spiel in Rust (Ziel: Windows Desktop, Multiplattform-kompatibel). 
+Das Spiel soll extrem modular, leichtgewichtig und erweiterbar sein.
+
+Vorgaben für Phase 1:
+1. Technologie-Stack: Nutze Bevy (aktuelle Version) oder ein leichtgewichtiges 2D-Framework mit ECS-Architektur. Begründe kurz die Wahl.
+2. Fenster & Rendering: 
+   - Festes Fensterformat mit nativer Retro-Auflösung (z. B. 320x240 oder 480x270 Pixel), gerendert über eine Pixel-Perfect 2D-Kamera mit Nearest-Neighbor-Filtering (keine Weichzeichnung/Blur).
+   - Fenstergröße fest skaliert (z. B. 3x/4x Integer Scaling), kein freies Resizing/Fullscreen.
+3. Mod- & Erweiterungsarchitektur:
+   - Die Codebasis muss streng modular aufgebaut sein (Plugin-basiert).
+   - Definiere bereits jetzt Interfaces/Traits für Content-Definitionen (z. B. Items, Klassen, Entities, Tiles), die extern via Daten (RON/JSON) oder dynamische Plugins geladen werden können.
+4. Erstes Deliverable:
+   - Saubere Cargo.toml mit relevanten Features.
+   - Initialer Game Loop mit Hauptmenü- / In-Game-State.
+   - Render-Test: Eine pastellfarbene GameBoy-Farbpalette (z. B. 4 bis 16 Farben) und ein gerendertes Sprite/Tile zur Verifizierung des Pixel-Art-Lookups.
+=============================================
+
+
+>>> ITERATION 1/8 GESTARTET <<<
+[AGENT] Sende Prompt an CLI (/home/aiagent/.local/bin/agy)...
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 0
+Das Fundament für **Phase 1** von **`watchout_pixls`** ist implementiert, dokumentiert und vollständig über Unit- und Integrationstests (`cargo test`, `cargo clippy`) verifiziert.
+
+---
+
+### 1. Technologie-Stack & Begründung
+
+* **Gewählter Stack:** **Bevy (`0.15`, modular mit `default-features = false`: `bevy_state`, `bevy_asset`, `bevy_color`, `multi_threaded`)** kombiniert mit einer leichtgewichtigen, plattformübergreifenden 2D-Pixel-Pipeline (`winit` + `softbuffer` + `image`) in [Cargo.toml](file:///home/aiagent/workspace/watchout_pixls/Cargo.toml).
+* **Begründung:**
+  1. **Echte Bevy-ECS- & Plugin-Architektur:** Wir nutzen das offizielle Bevy-ECS (`App`, `Plugin`, `PluginGroup`, `States`, `OnEnter`/`OnExit`, `Component`, `Resource`, `Event`), wodurch das Spiel strikt modular und über Plugins erweiterbar ist.
+  2. **Leichtgewichtig & Multiplattform-kompatibel (Windows, Linux, macOS):** Durch das Deaktivieren des schweren 3D-PBR-/Shader-Stacks (`default-features = false`) entfallen hunderte unnötige 3D-/Audio-Abhängigkeiten. Das sorgt für extrem schnelle Compile-Zeiten, schlanke Binaries und deterministische Headless-Testbarkeit.
+  3. **Garantiert Pixel-Perfect:** Unser eigener 2D-Pixel-Canvas rendert exakt in der nativen Retro-Auflösung und skaliert über striktes ganzzahliges Nearest-Neighbor-Upscaling ohne GPU-Treiber-Weichzeichnung.
+
+---
+
+### 2. Fenster & Pixel-Perfect 2D-Rendering ([src/window_render.rs](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs))
+
+* **Native Retro-Auflösung ([`RetroResolutionPreset`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L27-L46)):** Unterstützt standardmäßig `320x240` (`Retro320x240`) sowie `480x270` (`Widescreen480x270`).
+* **Integer Scaling & Fenstersperre ([`RetroWindowConfig`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L92-L176), [`build_locked_window_attributes`](file:///home/aiagent/workspace/watchout_pixls/src/desktop.rs#L26-L36)):**
+  * Feste Skalierung über [`IntegerScaling`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L68-L89) (Standard `3x` $\rightarrow$ `960x720` bzw. `4x` $\rightarrow$ `1280x960` / `1920x1080`).
+  * `resizable: false` und `fullscreen: false` (Maximieren-Button deaktiviert, Validierung über [`RetroWindowConfig::validate`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L157-L175)).
+* **Pixel-Pe[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 2445
+rfect 2D-Kamera & Nearest-Neighbor ([`PixelPerfectCamera2d`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L182-L216), [`PixelCanvas`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L220-L384)):**
+  * [`PixelPerfectCamera2d::world_to_screen_pixel`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L211-L215) rastet Sub-Pixel-Weltkoordinaten auf exakte Integer-Pixel ein.
+  * [`TextureFilterMode::Nearest`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L50-L57) erzwingt Punkt-Sampling; lineare Filterung wird per Fehler abgewiesen.
+  * [`PixelCanvas::upscale_nearest_neighbor`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L334-L349) skaliert jeden nativen Pixel verlustfrei auf einen exakten $N \times N$-Block.
+
+---
+
+### 3. Mod- & Erweiterungsarchitektur ([src/content.rs](file:///home/aiagent/workspace/watchout_pixls/src/content.rs), [src/modding.rs](file:///home/aiagent/workspace/watchout_pixls/src/modding.rs))
+
+* **Plugin-Gruppen:** Alle Subsysteme sind als eigenständige Bevy-Plugins gekapselt und in [`WatchoutPixlsPlugins`](file:///home/aiagent/workspace/watchout_pixls/src/lib.rs#L28-L62) zusammengefasst:
+  * [`WindowAndRenderPlugin`](file:///home/aiagent/workspace/watchout_pixls/src/window_render.rs#L397-L418)
+  * [`PaletteAndSpritePlugin`](file:///home/aiagent/workspace/watchout_pixls/src/palette_sprite.rs#L422-L438)
+  * [`ContentPlugin`](file:///home/aiagent/workspace/watchout_pixls/src/content.rs#L494-L504)
+  * [`ModLoaderPlugin`](file:///home/aiagent/workspace/watchout_pixls/src/modding.rs#L244-L307)
+  * [`GameStatePlugin`](file:///home/aiagent/workspace/watchout_pixls/src/state.rs#L194-L218)
+* **Content-Trait & Registries ([`ContentDefinition`](file:///home/aiagent/workspace/watchout_pixls/src/content.rs#L65-L89), [`ContentRegistry<T>`](file:///home/aiagent/workspace/watchout_pixls/src/content.rs#L92-L212)):**
+  * Implementiert für [`ItemDefinition`](file:///home/aiagent/workspace/watchout_pixls/src/content.rs#L228-L273), [`ClassDefinition`](file:///home/aiagent/workspace/watchout_pixls/src/content.rs#L280-L333), [`EntityDefinition`](file:///home/aiagent/workspace/watchout_pixls/src/content.rs#L349-L395) und [`TileDefinition`](file:///home/aiagent/workspace/watchout_pixls/src/content.rs#L402-L462).
+  * Unterstützt das Laden aus **RON** (`.ron`) und **JSON** (`.json`) (Beispiel-Content-Pack unter [assets/content/mod.ron](file:///home/aiagent/workspace/watchout_pixls/assets/content/mod.ron), [items.ron](file:///home/aiagent/workspace/watchout_pixls/assets/content/items.ron), [classes.ron](file:///home/aiagent/workspace/watchout_pixls/assets/content/classes.ron), [entities.json](file:///home/aiagent/workspace/watchout_pixls/assets/content/entities.json), [tiles.ron](file:///home/aiagent/workspace/watchout_pixls/assets/content/tiles.ron)).
+* **Mod-Extension-Interface ([`ModExtension`](file:///home/aiagent/workspace/watchout_pixls/src/modding.rs#L82-L95), [`ModManager`](file:///home/aiagent/workspace/watchout_pixls/src/modding.rs#L105-L241)):**
+  * Erlaubt sowohl statische Rust-Plugins als auch das dynamische Nachladen von Shared Libraries (`.dll` / `.so` / `.dylib` über[WORKER HEARTBEAT] Prozess läuft... Output-Bytes: 5694
+ [`ModManager::load_dynamic_library`](file:///home/aiagent/workspace/watchout_pixls/src/modding.rs#L214-L240)).
+
+---
+
+### 4. Game Loop & Pastel-GameBoy-Render-Test ([src/state.rs](file:///home/aiagent/workspace/watchout_pixls/src/state.rs), [src/palette_sprite.rs](file:///home/aiagent/workspace/watchout_pixls/src/palette_sprite.rs))
+
+* **Game States ([`GameState`](file:///home/aiagent/workspace/watchout_pixls/src/state.rs#L13-L22)):** Vollständiger State-Loop zwischen `MainMenu`, `InGame` und `Paused` inkl. Event-Steuerung über [`StateTransitionAction`](file:///home/aiagent/workspace/watchout_pixls/src/state.rs#L25-L33).
+* **Pastell-GameBoy-Farbpalette ([`PastelGameBoyPalette`](file:///home/aiagent/workspace/watchout_pixls/src/palette_sprite.rs#L72-L169)):**
+  * Unterstützt 4 bis 16 Farben (`pastel_dmg_4`, `pastel_dmg_8`, `pastel_deluxe_16`) mit sanften Pastelltönen (`#FAF3E0` Cream Mist, `#B8E0D2` Mint Pastel, `#80B9AD` Sage Leaf, `#4A5859` Deep Slate Berry, `#F7C5CC` Peach Blossom u. a.).
+* **Sprite- & Tile-Lookup ([`IndexedPixelGrid`](file:///home/aiagent/workspace/watchout_pixls/src/palette_sprite.rs#L175-L315)):**
+  * Rendert im Render-Test ([`setup_in_game_scene_system`](file:///home/aiagent/workspace/watchout_pixls/src/state.rs#L87-L141)) die Farbpaletten-Swatches, einen 8x6-Tilemap-Hof aus [`pastel_meadow_tile_8x8`](file:///home/aiagent/workspace/watchout_pixls/src/palette_sprite.rs#L252-L267) und [`pastel_cobble_tile_8x8`](file:///home/aiagent/workspace/watchout_pixls/src/palette_sprite.rs#L270-L285) sowie das Held-Sprite [`hero_pixl_sprite_8x8`](file:///home/aiagent/workspace/watchout_pixls/src/palette_sprite.rs#L288-L303) mit Transparenz-Index `0`.
+
+[AGENT] CLI beendet mit Exit-Code 0
+[VALIDATION] Starte Host-Validierung: 'cargo test'
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running unittests src/lib.rs (target/debug/deps/watchout_pixls-b3eccbd5990f0e30)
+
+running 6 tests
+test tests::test_content_definitions_ron_json_and_mod_extensions ... ok
+test tests::test_pastel_gameboy_palettes_and_pixel_lookup ... ok
+test tests::test_pixel_perfect_camera_snaps_subpixel_coordinates ... ok
+test tests::test_window_config_enforces_fixed_integer_scaling_and_nearest_filter ... ok
+test tests::test_nearest_neighbor_integer_upscaling_is_exact ... ok
+test tests::test_game_loop_states_and_render_verification ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running unittests src/main.rs (target/debug/deps/watchout_pixls-44b18a779d51e892)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/phase1_integration.rs (target/debug/deps/phase1_integration-140d033d13598bcb)
+
+running 3 tests
+test integration_mod_loader_plugin_and_external_packs ... ok
+test integration_widescreen_480x270_4x_integer_scaling ... ok
+test integration_full_game_loop_and_png_render_verification ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+   Doc-tests watchout_pixls
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+[VALIDATION] Validierungsbefehl beendet mit Exit-Code 0
+
+[SUCCESS] Deterministische Validierung ERFOLGREICH!
+[GIT] Erstelle automatischen Git-Commit...

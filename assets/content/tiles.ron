@@ -1,0 +1,11 @@
+[
+    (
+        id: "tile.sky_stream",
+        display_name: "Sky Breeze Shallow Stream",
+        walkable: true,
+        transparent: true,
+        movement_cost: 2.0,
+        sprite_id: "tile_sky_stream",
+        custom_indices_8x8: None,
+    ),
+]

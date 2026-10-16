@@ -1,0 +1,47 @@
+[package]
+name = "watchout_pixls"
+version = "0.1.0"
+edition = "2021"
+authors = ["watchout_pixls Contributors"]
+description = "A modular, lightweight 2D retro pixel-art open-source game built on Bevy ECS"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+[features]
+default = ["desktop-window", "ron-content", "json-content", "dynamic-mods"]
+# Enables native cross-platform desktop windowing (Windows, Linux, macOS) via winit + softbuffer
+desktop-window = ["dep:winit", "dep:softbuffer"]
+# Enables external content definition loading via RON (Rusty Object Notation)
+ron-content = ["dep:ron"]
+# Enables external content definition loading via JSON
+json-content = ["dep:serde_json"]
+# Enables runtime loading of dynamic shared-library mods (.dll / .so / .dylib)
+dynamic-mods = ["dep:libloading"]
+# Headless mode for CI/testing and deterministic framebuffer verification
+headless = []
+
+[dependencies]
+# Core ECS, Plugin, State, Math, Color, Asset & Reflection engine (modular Bevy without 3D PBR bloat)
+bevy = { version = "0.15", default-features = false, features = [
+    "bevy_asset",
+    "bevy_color",
+    "bevy_state",
+    "multi_threaded",
+] }
+
+# Lightweight cross-platform 2D windowing & integer-scaled pixel presentation
+winit = { version = "0.30", default-features = false, features = ["x11", "rwh_06"], optional = true }
+softbuffer = { version = "0.4", default-features = false, features = ["x11", "x11-dlopen"], optional = true }
+
+# Serialization & external data-driven content definitions (RON / JSON)
+serde = { version = "1.0", features = ["derive"] }
+ron = { version = "0.8", optional = true }
+serde_json = { version = "1.0", optional = true }
+
+# Dynamic plugin/mod loading (.dll on Windows, .so on Linux, .dylib on macOS)
+libloading = { version = "0.8", optional = true }
+
+# Image export & sprite/tile texture verification
+image = { version = "0.25", default-features = false, features = ["png"] }
+thiserror = "2.0"
+log = "0.4"
