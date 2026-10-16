@@ -30,7 +30,7 @@
 - **Automatisierte Validierung:**
   - Vor jedem Abschluss einer Aufgabe MUSS der Validierungsbefehl fehlerfrei durchlaufen:
     ```bash
-    cargo test
+cargo test
     ```
   - Schreibe begleitend Unit-Tests und Regressionstests für alle neuen Funktionalitäten.
 - **Fehleranalyse:**
