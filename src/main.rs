@@ -7,6 +7,10 @@ use watchout_pixls::modding::ModManager;
 use watchout_pixls::palette_sprite::PastelGameBoyPalette;
 use watchout_pixls::state::{GameState, StateTransitionAction};
 use watchout_pixls::window_render::{PixelCanvas, RetroWindowConfig};
+use watchout_pixls::world::{
+    ChunkStreamingConfig, WorldGridConfig, WorldMap, WorldPersistence, WorldSeed,
+    WorldStreamingMetrics,
+};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -36,16 +40,19 @@ fn main() {
     // Step 1: Run initial MainMenu tick
     app.update();
 
-    // Print Phase 1 diagnostic summary
+    // Print Phase 1 & Phase 2 diagnostic summary
     {
         let cfg = app.world().resource::<RetroWindowConfig>();
         let palette = app.world().resource::<PastelGameBoyPalette>();
         let registries = app.world().resource::<GameContentRegistries>();
         let mods = app.world().resource::<ModManager>();
         let state = app.world().resource::<State<GameState>>();
+        let seed = app.world().resource::<WorldSeed>();
+        let grid = app.world().resource::<WorldGridConfig>();
+        let streaming = app.world().resource::<ChunkStreamingConfig>();
 
         println!("============================================================");
-        println!(" watchout_pixls — Phase 1 (Modular Bevy ECS + Pixel-Perfect)");
+        println!(" watchout_pixls — Phase 1 & 2 (Bevy ECS + Procedural World)");
         println!("============================================================");
         println!(
             " Native Resolution : {}x{} px ({:?})",
@@ -68,6 +75,19 @@ fn main() {
             palette.len()
         );
         println!(
+            " World Grid & Seed : {}x{} px/tile, {}x{} tiles/chunk ({} tiles/chunk), Seed: {:#018x}",
+            grid.tile_size_px,
+            grid.tile_size_px,
+            grid.chunk_size_tiles,
+            grid.chunk_size_tiles,
+            grid.tiles_per_chunk(),
+            seed.0
+        );
+        println!(
+            " Chunk Streaming   : load_radius={}, unload_radius={}, max_tasks/frame={}",
+            streaming.load_radius, streaming.unload_radius, streaming.max_tasks_per_frame
+        );
+        println!(
             " Loaded Content    : {} total ({} Items, {} Classes, {} Entities, {} Tiles)",
             registries.total_definitions(),
             registries.items.len(),
@@ -88,15 +108,22 @@ fn main() {
         return;
     }
 
-    // Headless verification loop: transition MainMenu -> InGame and render the test scene
+    // Headless verification loop: transition MainMenu -> InGame, stream chunks, and render scene
     app.world_mut().send_event(StateTransitionAction::StartGame);
     app.update();
     app.update();
 
     let state = *app.world().resource::<State<GameState>>().get();
     let canvas = app.world().resource::<PixelCanvas>();
+    let world_map = app.world().resource::<WorldMap>();
+    let persistence = app.world().resource::<WorldPersistence>();
+    let stream_metrics = app.world().resource::<WorldStreamingMetrics>();
     println!(
-        " Headless Render-Test verified in state {:?} (rendered frames: {})",
-        state, canvas.frame_count
+        " Headless Render-Test verified in state {:?} (frames: {}, active chunks: {}, explored: {}, async tasks spawned: {})",
+        state,
+        canvas.frame_count,
+        world_map.active_chunk_count(),
+        persistence.explored_chunk_count(),
+        stream_metrics.total_async_tasks_spawned
     );
 }

@@ -361,12 +361,15 @@ pub struct PaletteVerificationSwatches {
     pub swatch_size: u32,
 }
 
-/// System that renders all visible tiles, palette swatches, and sprites through
+/// System that renders all visible chunks, tiles, palette swatches, and sprites through
 /// the `PixelPerfectCamera2d` onto the native `PixelCanvas`, then executes
 /// strict Nearest-Neighbor integer scaling.
+#[allow(clippy::too_many_arguments)]
 pub fn render_pixel_scene_system(
     palette: Res<PastelGameBoyPalette>,
     mut canvas: ResMut<PixelCanvas>,
+    world_map: Option<Res<crate::world::WorldMap>>,
+    grid_config: Option<Res<crate::world::WorldGridConfig>>,
     camera_query: Query<&PixelPerfectCamera2d>,
     tile_query: Query<(&WorldPixelPos, &TileSprite)>,
     swatch_query: Query<&PaletteVerificationSwatches>,
@@ -380,7 +383,18 @@ pub fn render_pixel_scene_system(
         PixelPerfectCamera2d::new(canvas.native_width(), canvas.native_height())
     });
 
-    // 2. Render background Tiles using integer-snapped camera coordinates
+    // 2. Render procedural active chunk tiles visible within the camera viewport
+    if let (Some(world_map), Some(grid_config)) = (world_map, grid_config) {
+        crate::world::render_visible_chunks_to_canvas(
+            &mut canvas,
+            &palette,
+            &camera,
+            &world_map,
+            &grid_config,
+        );
+    }
+
+    // 3. Render explicit background TileSprite entities using integer-snapped camera coordinates
     for (pos, tile) in &tile_query {
         let screen_px = camera.world_to_screen_pixel(pos.to_vec2());
         let _ = tile

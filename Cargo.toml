@@ -2,7 +2,7 @@
 name = "watchout_pixls"
 version = "0.1.0"
 edition = "2021"
-authors = ["watchout_pixls Contributors"]
+authors = ["Ghostside.net"]
 description = "A modular, lightweight 2D retro pixel-art open-source game built on Bevy ECS"
 license = "GPL-3.0-or-later"
 readme = "README.md"
@@ -43,5 +43,8 @@ libloading = { version = "0.8", optional = true }
 
 # Image export & sprite/tile texture verification
 image = { version = "0.25", default-features = false, features = ["png"] }
+# Compression & integrity checksums for binary/RON/JSON chunk persistence (Phase 2)
+flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
+crc32fast = "1.5"
 thiserror = "2.0"
 log = "0.4"

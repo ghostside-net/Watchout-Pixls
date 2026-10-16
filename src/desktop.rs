@@ -124,6 +124,38 @@ impl ApplicationHandler for DesktopAppRunner {
                                 .world_mut()
                                 .send_event(StateTransitionAction::ReturnToMainMenu);
                         }
+                        PhysicalKey::Code(KeyCode::KeyW | KeyCode::ArrowUp) => {
+                            self.app.world_mut().send_event(
+                                crate::world::HeroMoveEvent::TranslatePixels {
+                                    delta: Vec2::new(0.0, -16.0),
+                                    check_collision: true,
+                                },
+                            );
+                        }
+                        PhysicalKey::Code(KeyCode::KeyS | KeyCode::ArrowDown) => {
+                            self.app.world_mut().send_event(
+                                crate::world::HeroMoveEvent::TranslatePixels {
+                                    delta: Vec2::new(0.0, 16.0),
+                                    check_collision: true,
+                                },
+                            );
+                        }
+                        PhysicalKey::Code(KeyCode::KeyA | KeyCode::ArrowLeft) => {
+                            self.app.world_mut().send_event(
+                                crate::world::HeroMoveEvent::TranslatePixels {
+                                    delta: Vec2::new(-16.0, 0.0),
+                                    check_collision: true,
+                                },
+                            );
+                        }
+                        PhysicalKey::Code(KeyCode::KeyD | KeyCode::ArrowRight) => {
+                            self.app.world_mut().send_event(
+                                crate::world::HeroMoveEvent::TranslatePixels {
+                                    delta: Vec2::new(16.0, 0.0),
+                                    check_collision: true,
+                                },
+                            );
+                        }
                         PhysicalKey::Code(KeyCode::Escape) => {
                             event_loop.exit();
                         }

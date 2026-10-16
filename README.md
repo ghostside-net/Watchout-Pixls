@@ -1,59 +1,130 @@
-# Watchout Pixls!
+# Watchout Pixls! 🌸🗡️
 
-A small open-world pixelart game to play, enjoy, edit, mod and work with :)
+> A tiny, vibrant, open-world pixel-art adventure built for exploration, tinkering, and endless community mods.
 
-Ein extrem modulares, leichtgewichtiges 2D-Open-Source-Pixel-Art-Spiel in **Rust** auf Basis von **Bevy ECS** (Zielplattform: Windows Desktop & Multiplattform Linux/macOS).
+**Watchout Pixls!** ist ein leichtgewichtiges, modulares 2D-Action-RPG in **Rust** auf Basis von **Bevy ECS**. Es kombiniert den nostalgischen Charme klassischer GameBoy-Farbwelten in sanften Pastelltönen mit modernen Architekturprinzipien: prozedural generierte Chunk-Welten, progressive Klassenentwicklung (vom kleinen Messer bis zum Laserschwert!) und eine erweiterbare Modding-Schnittstelle.
 
----
-
-## 1. Technologie-Stack & Architektur-Begründung
-
-Wir nutzen **Bevy (aktuelle Version 0.15)** in einer **strikt modularen, leichtgewichtigen 2D-Konfiguration** (`default-features = false` mit `bevy_state`, `bevy_asset`, `bevy_color`, `multi_threaded`), gekoppelt mit einer deterministischen Pixel-Perfect-2D-Render-Pipeline (`winit` + `softbuffer` + `image`):
-
-- **Echtes Bevy ECS & Plugin-Ökosystem:** Volle Unterstützung für Bevy `App`, `Plugin`, `PluginGroup`, `States` (`OnEnter`, `OnExit`, `in_state`), `Component`, `Resource`, `Event` und parallele Systeme.
-- **Leichtgewichtig & Schnell:** Durch Verzicht auf den schweren 3D-PBR-/Shader-Stack bleiben Compile-Zeiten kurz, die Binary kompakt und die Ausführung frei von System-Header-Abhängigkeiten (`alsa-sys`/`libudev-sys`), während Windows, Linux und macOS nahtlos unterstützt werden.
-- **Deterministisches Pixel-Perfect-Rendering:** Ein nativer Retro-Framebuffer (`320x240` bzw. `480x270`) mit striktem Nearest-Neighbor-Integer-Scaling verhindert Sub-Pixel-Artefakte und Weichzeichnung zu 100 % und lässt sich komplett headless in `cargo test` verifizieren.
+Das Spiel ist von Grund auf als offene Lern- und Spielwiese konzipiert: Jeder kann hineinschauen, den Code nachvollziehen, eigene Spielwelten erschaffen oder das Basisspiel über Datenpakete nahtlos modifizieren.
 
 ---
 
-## 2. Features in Phase 1
+## 🎮 Vision & Gameplay-Kern
 
-1. **Fenster & Pixel-Perfect 2D-Rendering ([`src/window_render.rs`](src/window_render.rs)):**
-   - Feste native Retro-Auflösung (`320x240` Standard, `480x270` Widescreen-Preset).
-   - `PixelPerfectCamera2d` mit Integer-Pixel-Snapping und erzwungenem `TextureFilterMode::Nearest` (keine Weichzeichnung/Blur).
-   - Feste ganzzahlige Fensterskalierung (`3x` -> `960x720` bzw. `4x` -> `1280x960`), kein freies Resizing (`resizable: false`) und kein Fullscreen (`fullscreen: false`).
-2. **Pastellfarbene GameBoy-Palette & Sprite/Tile-Lookup ([`src/palette_sprite.rs`](src/palette_sprite.rs)):**
-   - `PastelGameBoyPalette` (4-, 8- und 16-Farben-Presets mit sanfter Pastell-DMG-Rampe `#FAF3E0`, `#B8E0D2`, `#80B9AD`, `#4A5859` sowie Pastell-Akzenten).
-   - Indizierte Pixel-Art-Assets (`IndexedPixelGrid`) für 8x8-Tiles (`pastel_meadow_tile_8x8`, `pastel_cobble_tile_8x8`) und das 8x8-Held-Sprite (`hero_pixl_sprite_8x8`).
-3. **Mod- & Erweiterungsarchitektur ([`src/content.rs`](src/content.rs), [`src/modding.rs`](src/modding.rs)):**
-   - Zentrales Trait `ContentDefinition` und generische `ContentRegistry<T>` für **Items** (`ItemDefinition`), **Klassen** (`ClassDefinition`), **Entities** (`EntityDefinition`) und **Tiles** (`TileDefinition`).
-   - Datengetriebenes Laden via **RON** (`.ron`) und **JSON** (`.json`) (siehe Beispiel-Modpack in [`assets/content/`](assets/content/)).
-   - Trait `ModExtension` für statische Rust-Plugins sowie dynamisch zur Laufzeit geladene Shared Libraries (`.dll` / `.so` / `.dylib` über `libloading`).
-4. **Game Loop & State Machine ([`src/state.rs`](src/state.rs)):**
-   - Bevy-State-Machine (`GameState::MainMenu`, `GameState::InGame`, `GameState::Paused`) mit sauberen `OnEnter`-/`OnExit`-Systemen und Render-Test-Szene.
+- **Pastell-Retro-Charme:** Gestochen scharfe Pixel-Art im Stil nostalgischer Handhelds, gerendert über eine Integer-skalierte, weichzeichnungsfreie Pixel-Pipeline.
+- **Prozedurale Open World:** Eine unendliche, rasterbasierte Welt, die dynamisch in Chunks generiert, gestreamt und deterministisch per Seed reproduziert wird.
+- **Dungeons & Entdeckungen:** Geheimnisvolle Höhlen, verlassene Häuser und seltene Schauplätze – von handgebauten Story-Räumen bis zu labyrinthischen, prozeduralen Gewölben mit Bossbegegnungen.
+- **Progressive Evolution:** Wähle deine Klasse und steige über einen verzweigten Skilltree auf. Deine Ausrüstung wächst mit deinen Aufgaben – von einfachen Starterwaffen bis zu mächtigen Sci-Fi-Artefakten.
+- **Respekt für deine Zeit:** Nahtloses Pausieren, automatisches Speichern im Hintergrund und faire Checkpoints für den Wiedereinstieg nach brenzligen Abenteuern.
 
 ---
 
-## 3. Installation, Start & Tests
+## 🛠️ Technologie-Stack & Architektur
+
+Wir setzen auf **Bevy (0.15)** in einem bewusst schlanken, fokussierten 2D-Setup (`default-features = false` mit `bevy_state`, `bevy_asset`, `bevy_color`, `multi_threaded`), kombiniert mit einer deterministischen Software-Rendering-Pipeline (`winit` + `softbuffer` + `image`):
+
+- **Reines Bevy ECS:** Volle Unterstützung für `App`, `Plugin`, `States` (`OnEnter`, `OnExit`, `in_state`), `Component`, `Resource`, `Event` und parallele Systeme.
+- **Kompakt & Unabhängig:** Durch den Verzicht auf schwere 3D-PBR- und Shader-Pipelines bleiben Binary-Größe und Kompilierzeiten minimal. Keine lästigen Systemabhängigkeiten (`alsa-sys`/`libudev-sys`) unter Linux.
+- **Deterministisches Pixel-Perfect-Rendering:** Feste native Auflösung (`320x240` bzw. `480x270`) mit Nearest-Neighbor-Skalierung garantiert absolute Schärfe ohne Sub-Pixel-Artefakte und ermöglicht vollwertige Headless-Tests in CI/CD.
+
+---
+
+## 📦 Aktueller Stand (Phase 1 & Phase 2)
+
+1. **Fenster & Rendering ([`src/window_render.rs`](src/window_render.rs)):**
+   - Native Retro-Auflösung (`320x240` Standard, `480x270` Widescreen-Modus).
+   - `PixelPerfectCamera2d` mit Integer-Pixel-Snapping und erzwungenem `TextureFilterMode::Nearest`.
+   - Feste ganzzahlige Skalierung (`3x` -> `960x720`, `4x` -> `1280x960`), kein freies Resizing oder Fullscreen zur Wahrung des Pixel-Verhältnisses.
+2. **Pastell-Palette & Sprites ([`src/palette_sprite.rs`](src/palette_sprite.rs)):**
+   - Sanfte GameBoy-Farbpalette (`PastelGameBoyPalette`) mit 4-, 8- und 16-Farben-Presets (`#FAF3E0`, `#B8E0D2`, `#80B9AD`, `#4A5859` plus Akzente).
+   - Indizierte Pixel-Art-Strukturen (`IndexedPixelGrid`) für 8x8-Tiles und Helden-Sprites sowie Viewport-geculltes 16x16-Chunk-Rendering.
+3. **Mod- & Content-Architektur ([`src/content.rs`](src/content.rs), [`src/modding.rs`](src/modding.rs)):**
+   - Zentrales Trait `ContentDefinition` und typisierte `ContentRegistry<T>` für Items, Klassen, Entities und Tiles.
+   - Datengetriebenes Laden über **RON** (`.ron`) und **JSON** (`.json`).
+   - `ModExtension`-Trait für native Rust-Plugins und dynamisch ladbare Bibliotheken (`.dll`, `.so`, `.dylib` via `libloading`).
+4. **State Machine ([`src/state.rs`](src/state.rs)):**
+   - Robuste Bevy-Zustandsverwaltung (`GameState::MainMenu`, `GameState::InGame`, `GameState::Paused`).
+5. **Kern-Weltsystem ([`src/world/`](src/world/mod.rs)):**
+   - **Koordinaten & Raster ([`src/world/coords.rs`](src/world/coords.rs)):** Tile-basiertes System (`16x16` Pixel pro Feld) und Einteilung in feste Chunks (`16x16` Tiles = 256 Tiles pro Chunk) mit euklidischer Koordinatenumrechnung (`TileCoord`, `ChunkCoord`, `LocalTileCoord`) über alle positiven und negativen Quadranten.
+   - **Prozedurale Weltgenerierung ([`src/world/noise.rs`](src/world/noise.rs), [`src/world/generation.rs`](src/world/generation.rs)):** Deterministischer 2D-Noise-Generator (`FastNoise2d`: Simplex, Perlin, FBm, Ridged Multifractal & SplitMix64-Tile-Hashing) auf Basis von `WorldSeed` für 5 Biome (`PastelMeadow`, `BreezeLake`, `LavenderForest`, `CobbleHighlands`, `SunlitGlade`), zusammenhängende Wege (`DirtPath`), Wände (`WallKind`) und abbaubare Ressourcen (`ResourceNode`).
+   - **Streaming & Multithreading ([`src/world/streaming.rs`](src/world/streaming.rs)):** Dynamisches Laden aktiver Chunks im Radius um den Spieler via `bevy::tasks::AsyncComputeTaskPool` ohne Framedrops sowie Hysterese-basiertes Entladen entfernter Chunks.
+   - **Persistenz & Speichersystem ([`src/world/persistence.rs`](src/world/persistence.rs)):** Effiziente Speicherung erforschter Gebiete (`ExploredChunkRecord`) und modifizierter Chunks (`ChunkData` & `TileDelta`) in kompaktem Binärformat (`WPX2` + CRC32 + Zlib) sowie komprimiertem/unkomprimiertem RON und JSON. Unberührte Chunks werden beim Entladen verworfen und bei Rückkehr deterministisch aus dem `WorldSeed` reproduziert.
+
+---
+
+## 🧩 Modding: Eigene Inhalte hinzufügen
+
+Das Spiel unterscheidet zwischen Basisinhalt und Mods primär durch den Speicherort. Neue Items, Klassen oder Kacheln können ganz ohne Rust-Compiler als reine Datendatei hinterlegt werden.
+
+### Beispiel: Eine neue Waffe per RON-Datei (`assets/content/items/laser_blade.ron`)
+
+```ron
+ItemDefinition(
+    id: "mod_pixl_laser_blade",
+    name: "Pastell-Laserklinge",
+    description: "Eine uralte Klinge aus gebündeltem Licht. Summt leise in Minzgrün.",
+    category: Weapon(
+        damage: 42,
+        attack_speed: 1.8,
+        scaling_stat: Dexterity,
+    ),
+    sprite_index: 24,
+    rarity: Legendary,
+)
+```
+
+Sobald das Spiel startet, liest die `ContentRegistry` den Ordner `assets/content/` (sowie den externen `mods/`-Ordner) ein und schaltet die Waffe direkt im Spielgeschehen frei.
+
+---
+
+## 🚀 Installation & Kompilierung
 
 ### Voraussetzungen
-- Rust Toolchain (`stable`, Edition 2021)
+- [Rust Toolchain](https://rustup.rs/) (Edition 2021, aktueller `stable`-Kanal)
+- Unter Linux genügen Standard-Build-Tools (`build-essential` bzw. `base-devel`).
+
+### Repository klonen
+```bash
+git clone [https://github.com/DEIN-NUTZERNAME/watchout-pixls.git](https://github.com/DEIN-NUTZERNAME/watchout-pixls.git)
+cd watchout-pixls
+```
+
+### Spiel starten
+```bash
+# Normaler Start mit Desktop-Fenster
+cargo run
+
+# Schnellerer Start im Dev-Modus mit Optimierungen
+cargo run --release
+
+# Headless-Modus (z. B. für Server-Umgebungen oder CI-Tests ohne Monitor)
+cargo run -- --headless
+```
 
 ### Tests ausführen
 ```bash
 cargo test
 ```
 
-### Spiel starten
-```bash
-# Desktop-Fenster (oder automatischer Headless-Fallback ohne Display-Server)
-cargo run
+---
 
-# Expliziter Headless-Verifikationslauf
-cargo run -- --headless
-```
+## 🗺️ Roadmap & Zukunftsmodule
 
-### Release-Build erstellen
-```bash
-cargo build --release
-```
+- [x] **Phase 1:** Fenster, ECS-Pipeline, Pastell-Palette, Content-Traits.
+- [x] **Phase 2:** Prozedurales Chunk-Grid, Simplex-Noise-Biomgenerierung, Chunk-Streaming & binäre Serialisierung.
+- [ ] **Phase 3:** Top-Down Controller mit Sub-Tile-Kollision, interaktive Kacheln, instanziierte Dungeon-Karten.
+- [ ] **Phase 4:** Klassen-Fortschritt, Skilltree, Gegner-Zustandsmaschinen, Endboss-Mechanik & Checkpoint-Autosave.
+- [ ] **Phase 5:** Autonomer Runtime-Mod-Loader (`/mods`), erweiterte Fehlerbehandlung und In-Game-Mod-Übersicht.
+
+---
+
+## 📜 Lizenz & Open-Source-Philosophie
+
+Dieses Projekt ist lizenziert unter der **GNU General Public License v3.0 (GPLv3)**.
+
+### Warum GPLv3?
+Wir glauben fest an echte digitale Allmende:
+- **Freiheit für alle:** Jeder darf den Quellcode einsehen, spielen, studieren, modifizieren und weiterverbreiten.
+- **Schutz vor Vendor-Lock-in:** Niemand darf diesen Code nehmen, in ein geschlossenes ("Closed Source") Produkt verwandeln und Dritten vorenthalten.
+- **Gemeinschaftlicher Mehrwert:** Wer Verbesserungen oder abgeleitete Werke auf Basis von *Watchout Pixls!* veröffentlicht, muss diese Modifikationen unter denselben freien Bedingungen der gesamten Community zurückgeben.
+
+Details findest du in der beiliegenden Datei [`LICENSE`](LICENSE) oder online auf [gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html).
