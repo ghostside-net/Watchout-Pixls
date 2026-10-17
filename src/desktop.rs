@@ -185,6 +185,37 @@ impl ApplicationHandler for DesktopAppRunner {
                             .world_mut()
                             .send_event(StateTransitionAction::StartGame);
                     }
+                    PhysicalKey::Code(KeyCode::KeyJ | KeyCode::KeyF) if is_pressed => {
+                        self.app
+                            .world_mut()
+                            .send_event(crate::combat::PlayerCombatActionEvent::BasicAttack);
+                    }
+                    PhysicalKey::Code(KeyCode::KeyK | KeyCode::ShiftLeft) if is_pressed => {
+                        self.app
+                            .world_mut()
+                            .send_event(crate::combat::PlayerCombatActionEvent::UseDash);
+                    }
+                    PhysicalKey::Code(KeyCode::KeyU | KeyCode::KeyQ) if is_pressed => {
+                        self.app
+                            .world_mut()
+                            .send_event(crate::combat::PlayerCombatActionEvent::UseAreaAttack);
+                    }
+                    PhysicalKey::Code(KeyCode::F5) if is_pressed => {
+                        self.app.world_mut().send_event(
+                            crate::save_checkpoint::PauseMenuAction::ManualSave {
+                                slot: crate::save_checkpoint::MANUAL_SAVE_SLOT_NAME.to_string(),
+                                file_path: None,
+                            },
+                        );
+                    }
+                    PhysicalKey::Code(KeyCode::F9) if is_pressed => {
+                        self.app.world_mut().send_event(
+                            crate::save_checkpoint::PauseMenuAction::ManualLoad {
+                                slot: crate::save_checkpoint::MANUAL_SAVE_SLOT_NAME.to_string(),
+                                file_path: None,
+                            },
+                        );
+                    }
                     PhysicalKey::Code(KeyCode::KeyP) if is_pressed => {
                         self.app
                             .world_mut()

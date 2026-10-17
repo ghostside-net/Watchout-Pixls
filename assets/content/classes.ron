@@ -8,4 +8,22 @@
         starting_items: ["item.lavender_wand", "item.berry_potion"],
         passive_trait: "ChromaticBrew",
     ),
+    (
+        id: "class.blade_vanguard",
+        display_name: "Blade Vanguard",
+        base_health: 125,
+        base_mana: 30,
+        base_speed: 62.0,
+        starting_items: ["weapon.rusty_dagger", "item.berry_potion"],
+        passive_trait: "VanguardEdge",
+    ),
+    (
+        id: "class.cyber_sentinel",
+        display_name: "Cyber Sentinel",
+        base_health: 140,
+        base_mana: 50,
+        base_speed: 58.0,
+        starting_items: ["weapon.rusty_dagger", "item.berry_potion"],
+        passive_trait: "NanoAegis",
+    ),
 ]

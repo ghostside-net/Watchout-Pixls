@@ -15,6 +15,7 @@
 //!   deterministic Simplex/Perlin procedural generation, multithreaded chunk streaming
 //!   (`bevy::tasks`), and binary/compressed persistence.
 
+pub mod combat;
 pub mod content;
 #[cfg(feature = "desktop-window")]
 pub mod desktop;
@@ -22,11 +23,19 @@ pub mod interaction;
 pub mod modding;
 pub mod palette_sprite;
 pub mod player;
+pub mod progression;
+pub mod save_checkpoint;
 pub mod scene;
 pub mod state;
 pub mod window_render;
 pub mod world;
 
+pub use combat::{
+    evaluate_enemy_ai_state, simulate_boss_encounter, BossAttackPattern, BossBattleReport,
+    BossController, BossPhase, CombatOutcomeEvent, EnemyAiState, EnemyController, HealthPool,
+    PlayerCombatActionEvent,
+};
+pub use content::{WeaponDefinition, WeaponTier};
 pub use interaction::{
     can_trigger_interaction, Interactable, InteractableKind, InteractableTrigger,
     InteractionOutcomeEvent, Phase3GameplayPlugin, PlayerInteractEvent, TriggerMode,
@@ -35,6 +44,19 @@ pub use player::{
     check_aabb_collision, compute_normalized_movement_delta, compute_y_sort_order,
     overlapped_tiles_for_aabb, resolve_subtile_movement, Aabb, CollisionMap, FacingDirection,
     FixedCollisionGrid, PlayerHitbox, PlayerInputState, PlayerMovement, PlayerState, YSort,
+};
+pub use progression::{
+    resolve_weapon_id, ActiveSkillKind, AttributeStat, CharacterAttributes, CharacterProgression,
+    CombatStats, EffectiveStats, LevelUpEvent, PassiveSkillBonuses, ProgressionError, SkillBranch,
+    SkillEffect, SkillNode, SkillTree, WeaponEvolvedEvent, ATTRIBUTE_POINTS_PER_LEVEL,
+    BASE_XP_PER_LEVEL, SKILL_POINTS_PER_LEVEL,
+};
+pub use save_checkpoint::{
+    capture_game_save_state, ActiveCheckpoint, AutoSaveConfig, Checkpoint,
+    CheckpointActivatedEvent, GameLoadedEvent, GameSaveState, GameSavedEvent, LivePlayerSnapshot,
+    PauseMenuAction, PauseMenuOption, PauseMenuState, Phase4GameplayPlugin, PlayerDeathEvent,
+    PlayerRespawnedEvent, SaveGameError, SaveGameManager, SaveTriggerReason, AUTOSAVE_SLOT_NAME,
+    MANUAL_SAVE_SLOT_NAME,
 };
 pub use scene::{
     generate_bsp_dungeon, BspDungeonConfig, BspRoom, DungeonGenError, DungeonState, InstanceProp,
@@ -55,7 +77,7 @@ use crate::state::GameStatePlugin;
 use crate::window_render::{RetroWindowConfig, WindowAndRenderPlugin};
 use crate::world::WorldPlugin;
 
-/// Modular Bevy `PluginGroup` bundling all Phase 1, Phase 2 & Phase 3 core plugins for `watchout_pixls`.
+/// Modular Bevy `PluginGroup` bundling all Phase 1, Phase 2, Phase 3 & Phase 4 core plugins for `watchout_pixls`.
 #[derive(Default)]
 pub struct WatchoutPixlsPlugins {
     pub window_config: RetroWindowConfig,
@@ -88,7 +110,8 @@ impl PluginGroup for WatchoutPixlsPlugins {
             .add(ContentPlugin)
             .add(GameStatePlugin)
             .add(self.world_plugin)
-            .add(Phase3GameplayPlugin);
+            .add(Phase3GameplayPlugin)
+            .add(Phase4GameplayPlugin);
 
         let mut content_pack_dir: Option<std::path::PathBuf> = None;
         if let Some(env_dir) = std::env::var_os("WATCHOUT_CONTENT_DIR") {
@@ -1031,5 +1054,124 @@ mod tests {
         let prefab = PrefabLoader::load_from_file("starter_house.ron", None);
         assert!(prefab.is_ok());
         std::env::remove_var("WATCHOUT_PREFABS_DIR");
+    }
+
+    #[test]
+    fn test_phase4_weapon_evolution_and_mod_data_files() {
+        let mut registries = GameContentRegistries::new();
+        registries.register_core_defaults().unwrap();
+        registries.validate_weapon_evolution_paths().unwrap();
+
+        let core_path = registries.trace_weapon_evolution_path("weapon.rusty_dagger");
+        assert_eq!(
+            core_path,
+            vec![
+                "weapon.rusty_dagger".to_string(),
+                "weapon.iron_shortsword".to_string(),
+                "weapon.cobalt_katana".to_string(),
+                "weapon.laser_sword".to_string(),
+            ]
+        );
+        assert_eq!(
+            registries.weapons.get("weapon.rusty_dagger").unwrap().tier,
+            WeaponTier::Starter
+        );
+        assert_eq!(
+            registries.weapons.get("weapon.laser_sword").unwrap().tier,
+            WeaponTier::EndgameSciFi
+        );
+
+        let mut mod_manager = ModManager::new();
+        let raw_manifest = std::fs::read_to_string("assets/content/mod.ron").unwrap();
+        let manifest: ModManifest = ron::from_str(&raw_manifest).unwrap();
+        mod_manager
+            .load_manifest_from_dir(&manifest, "assets/content", &mut registries)
+            .unwrap();
+        registries.validate_weapon_evolution_paths().unwrap();
+        let mage_path = registries.trace_weapon_evolution_path("weapon.lavender_wand");
+        assert_eq!(
+            mage_path,
+            vec![
+                "weapon.lavender_wand".to_string(),
+                "weapon.crystal_scepter".to_string(),
+                "weapon.quantum_staff".to_string(),
+            ]
+        );
+        assert_eq!(
+            registries
+                .next_weapon_evolutions("weapon.iron_shortsword")
+                .len(),
+            2
+        );
+        assert!(registries.weapons.get("weapon.quantum_staff").is_some());
+        assert!(registries.classes.get("class.cyber_sentinel").is_some());
+    }
+
+    #[test]
+    fn test_phase4_xp_leveling_and_branching_skilltree() {
+        let mut registries = GameContentRegistries::new();
+        registries.register_core_defaults().unwrap();
+        let tree = SkillTree::default();
+        assert_eq!(tree.len(), 12);
+
+        let mut prog =
+            CharacterProgression::from_class("class.blade_vanguard", &registries).unwrap();
+        let gained = prog.gain_xp(1800);
+        assert!(gained >= 5);
+        assert!(prog.level >= 6);
+
+        prog.allocate_attribute(AttributeStat::Attack, 4).unwrap();
+        for skill_id in [
+            "skill.offense_root",
+            "skill.active_aoe_strike",
+            "skill.mobility_root",
+            "skill.active_dash",
+        ] {
+            prog.unlock_skill(skill_id, &tree).unwrap();
+        }
+        assert!(prog.unlocked_dash_skill(&tree).is_some());
+        assert!(prog.unlocked_aoe_skill(&tree).is_some());
+    }
+
+    #[test]
+    fn test_phase4_enemy_fsm_and_endboss_level_gate() {
+        assert_eq!(
+            evaluate_enemy_ai_state(EnemyAiState::Patrol, 45.0, 64.0, 18.0, 96.0),
+            EnemyAiState::Chase
+        );
+        assert_eq!(
+            evaluate_enemy_ai_state(EnemyAiState::Chase, 14.0, 64.0, 18.0, 96.0),
+            EnemyAiState::Attack
+        );
+        assert_eq!(
+            evaluate_enemy_ai_state(EnemyAiState::Chase, 110.0, 64.0, 18.0, 96.0),
+            EnemyAiState::Patrol
+        );
+
+        let mut registries = GameContentRegistries::new();
+        registries.register_core_defaults().unwrap();
+        let tree = SkillTree::default();
+        let boss = BossController::chrono_overlord();
+
+        let lv1 = CharacterProgression::from_class("class.blade_vanguard", &registries).unwrap();
+        let rep_lv1 = simulate_boss_encounter(&lv1, &registries, &tree, &boss, 650);
+        assert!(!rep_lv1.player_won);
+
+        let mut lv6 =
+            CharacterProgression::from_class("class.blade_vanguard", &registries).unwrap();
+        lv6.gain_xp(1800);
+        while lv6.evolve_weapon(None, &registries).is_ok() {}
+        for s in [
+            "skill.offense_root",
+            "skill.active_aoe_strike",
+            "skill.mobility_root",
+            "skill.active_dash",
+            "skill.defense_root",
+        ] {
+            lv6.unlock_skill(s, &tree).unwrap();
+        }
+        let rep_lv6 = simulate_boss_encounter(&lv6, &registries, &tree, &boss, 650);
+        assert!(rep_lv6.player_won);
+        assert_eq!(rep_lv6.highest_phase_reached, BossPhase::Phase3);
     }
 }

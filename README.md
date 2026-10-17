@@ -28,7 +28,7 @@ Wir setzen auf **Bevy (0.15)** in einem bewusst schlanken, fokussierten 2D-Setup
 
 ---
 
-## 📦 Aktueller Stand (Phase 1, Phase 2 & Phase 3)
+## 📦 Aktueller Stand (Phase 1, Phase 2, Phase 3 & Phase 4)
 
 1. **Fenster & Rendering ([`src/window_render.rs`](src/window_render.rs)):**
    - Native Retro-Auflösung (`320x240` Standard, `480x270` Widescreen-Modus).
@@ -38,8 +38,8 @@ Wir setzen auf **Bevy (0.15)** in einem bewusst schlanken, fokussierten 2D-Setup
    - Sanfte GameBoy-Farbpalette (`PastelGameBoyPalette`) mit 4-, 8- und 16-Farben-Presets (`#FAF3E0`, `#B8E0D2`, `#80B9AD`, `#4A5859` plus Akzente).
    - Indizierte Pixel-Art-Strukturen (`IndexedPixelGrid`) für 8x8-Tiles und Helden-Sprites sowie Viewport-geculltes 16x16-Chunk-Rendering.
 3. **Mod- & Content-Architektur ([`src/content.rs`](src/content.rs), [`src/modding.rs`](src/modding.rs)):**
-   - Zentrales Trait `ContentDefinition` und typisierte `ContentRegistry<T>` für Items, Klassen, Entities und Tiles.
-   - Datengetriebenes Laden über **RON** (`.ron`) und **JSON** (`.json`).
+   - Zentrales Trait `ContentDefinition` und typisierte `ContentRegistry<T>` für Items (`ItemDefinition`), Klassen (`ClassDefinition`), Entities (`EntityDefinition`), Tiles (`TileDefinition`) und Waffen (`WeaponDefinition`).
+   - Datengetriebenes Laden über **RON** (`.ron`) und **JSON** (`.json`) inklusive mehrstufiger Waffenevolutionspfade (`WeaponTier::Starter` -> `Intermediate` -> `Advanced` -> `EndgameSciFi`).
    - `ModExtension`-Trait für native Rust-Plugins und dynamisch ladbare Bibliotheken (`.dll`, `.so`, `.dylib` via `libloading`).
 4. **State Machine ([`src/state.rs`](src/state.rs)):**
    - Robuste Bevy-Zustandsverwaltung (`GameState::MainMenu`, `GameState::InGame`, `GameState::Paused`).
@@ -52,28 +52,35 @@ Wir setzen auf **Bevy (0.15)** in einem bewusst schlanken, fokussierten 2D-Setup
    - **8-Wege-Movement & Sliding-Kollision ([`src/player.rs`](src/player.rs)):** Geschwindigkeitsnormalisierung bei Diagonalschritten, Sub-Tile-Bewegung (`WorldPos`) mit achsengetrennter AABB-Sliding-Kollision (`resolve_subtile_movement`), Anti-Tunneling-Sub-Stepping, Y-Sorting (`YSort`) und `PlayerState` (`Idle`, `Moving`, `Interacting`, `Transitioning`).
    - **Interaktions- & Trigger-System ([`src/interaction.rs`](src/interaction.rs)):** `Interactable`-Trait und `InteractableTrigger` mit Unterscheidung zwischen automatischen Tile-Triggern (`TriggerMode::Automatic`) und interaktiven Tür-/Truhen-/NPC-Triggern (`TriggerMode::Interactive`, Taste `E` / `Leertaste`).
    - **Szenen-Management, BSP-Dungeons & Statische Prefabs ([`src/scene.rs`](src/scene.rs)):** `SceneManager` (`Scene::Overworld(OverworldState)` <-> `Scene::Instance(DungeonState)`) mit exakter Speicherung des Overworld-Rückkehrpunkts (`return_position`), deterministischer BSP-Dungeon-Generator (`generate_bsp_dungeon`) inklusive Flood-Fill-Pfadvalidierung sowie `PrefabLoader` für RON/JSON-Innenräume ([`assets/prefabs/starter_house.ron`](assets/prefabs/starter_house.ron), [`assets/prefabs/village_shrine.json`](assets/prefabs/village_shrine.json)).
+7. **Charakterprogression, Waffenevolution, Gegner-KI, Endboss & Speichersystem ([`src/progression.rs`](src/progression.rs), [`src/combat.rs`](src/combat.rs), [`src/save_checkpoint.rs`](src/save_checkpoint.rs)):**
+   - **Data-Driven Klassen & Waffenevolution ([`src/content.rs`](src/content.rs), [`assets/content/weapons.ron`](assets/content/weapons.ron), [`assets/content/classes.ron`](assets/content/classes.ron)):** Mehrstufige Waffenpfade vom `Rostigen Dolch` (`weapon.rusty_dagger`) über `Eisen-Kurzschwert`, `Kobalt-Katana` und `Lichtbogen-Klinge` bis zum Sci-Fi-Endgame-Artefakt `Pastell-Laserschwert` (`weapon.laser_sword`) sowie Magier-Pfad bis zum `Quanten-Stab` (`weapon.quantum_staff`).
+   - **XP, Leveling & Verzweigter Skilltree ([`src/progression.rs`](src/progression.rs)):** `CharacterProgression` mit quadratischer XP-Kurve, Attributpunkten (`Attack`, `Speed`, `Defense`, `Vitality`) und verzweigtem `SkillTree` (`Offense`, `Mobility`, `Defense`) für passive Stat-Boni und aktive Skills (`ActiveSkillKind::Dash`, `ActiveSkillKind::AreaAttack`).
+   - **Gegner-Zustandsmaschine & Mehrphasiger Endboss ([`src/combat.rs`](src/combat.rs)):** Standard-Gegner (`EnemyController`) mit endlicher Zustandsmaschine (`EnemyAiState::Patrol`, `Chase`, `Attack`) sowie der mehrphasige Endboss `Chrono-Lich Overlord` (`BossController`, `BossPhase::Phase1` / `Phase2` / `Phase3`) mit rotierenden Angriffsmustern (`CleavingStrike`, `RadialPulse`, `ChargingLunge`, `SupernovaBurst`) und Level-Gate (`recommended_min_level = 5`).
+   - **Auto-Save, Checkpoints & Pausenmenü ([`src/save_checkpoint.rs`](src/save_checkpoint.rs)):** Automatisches Speichern in festen Intervallen und bei Zonenwechseln (`AutoSaveConfig`, `SaveGameManager`), aktivierbare Karten-Checkpoints (`Checkpoint`, `ActiveCheckpoint`) für automatischen Tod-Respawn sowie `PauseMenuState` (`GameState::Paused`) mit manuellem Speichern und Laden (`GameSaveState` in RON/JSON).
 
 ---
 
 ## 🧩 Modding: Eigene Inhalte hinzufügen
 
-Das Spiel unterscheidet zwischen Basisinhalt und Mods primär durch den Speicherort. Neue Items, Klassen oder Kacheln können ganz ohne Rust-Compiler als reine Datendatei hinterlegt werden.
+Das Spiel unterscheidet zwischen Basisinhalt und Mods primär durch den Speicherort. Neue Items, Waffen, Klassen oder Kacheln können ganz ohne Rust-Compiler als reine Datendatei hinterlegt werden.
 
-### Beispiel: Eine neue Waffe per RON-Datei (`assets/content/items/laser_blade.ron`)
+### Beispiel: Eine neue Waffe per RON-Datei (`assets/content/weapons.ron`)
 
 ```ron
-ItemDefinition(
-    id: "mod_pixl_laser_blade",
-    name: "Pastell-Laserklinge",
-    description: "Eine uralte Klinge aus gebündeltem Licht. Summt leise in Minzgrün.",
-    category: Weapon(
-        damage: 42,
-        attack_speed: 1.8,
-        scaling_stat: Dexterity,
+[
+    (
+        id: "weapon.laser_sword",
+        display_name: "Pastell-Laserschwert",
+        tier: EndgameSciFi,
+        base_damage: 62,
+        attack_speed: 2.0,
+        range_px: 26.0,
+        crit_bonus: 0.22,
+        required_level: 5,
+        evolves_to: [],
+        sprite_id: "sprite_laser_sword",
     ),
-    sprite_index: 24,
-    rarity: Legendary,
-)
+]
 ```
 
 Sobald das Spiel startet, liest die `ContentRegistry` den Ordner `assets/content/` (sowie den externen `mods/`-Ordner) ein und schaltet die Waffe direkt im Spielgeschehen frei.
@@ -116,7 +123,7 @@ cargo test
 - [x] **Phase 1:** Fenster, ECS-Pipeline, Pastell-Palette, Content-Traits.
 - [x] **Phase 2:** Prozedurales Chunk-Grid, Simplex-Noise-Biomgenerierung, Chunk-Streaming & binäre Serialisierung.
 - [x] **Phase 3:** Top-Down Controller mit Sub-Tile-Kollision, interaktive Kacheln, instanziierte Dungeon-Karten.
-- [ ] **Phase 4:** Klassen-Fortschritt, Skilltree, Gegner-Zustandsmaschinen, Endboss-Mechanik & Checkpoint-Autosave.
+- [x] **Phase 4:** Klassen-Fortschritt, Skilltree, Gegner-Zustandsmaschinen, Endboss-Mechanik & Checkpoint-Autosave.
 - [ ] **Phase 5:** Autonomer Runtime-Mod-Loader (`/mods`), erweiterte Fehlerbehandlung und In-Game-Mod-Übersicht.
 
 ---

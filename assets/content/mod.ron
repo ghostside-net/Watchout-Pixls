@@ -10,5 +10,6 @@
     classes_files: ["classes.ron"],
     entities_files: ["entities.json"],
     tiles_files: ["tiles.ron"],
+    weapons_files: ["weapons.ron"],
     dynamic_library: None,
 )

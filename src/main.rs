@@ -52,7 +52,7 @@ fn main() {
         let streaming = app.world().resource::<ChunkStreamingConfig>();
 
         println!("============================================================");
-        println!(" watchout_pixls — Phase 1, 2 & 3 (ECS + World + Dungeons)");
+        println!(" watchout_pixls — Phase 1–4 (ECS, World, Dungeons, RPG)");
         println!("============================================================");
         println!(
             " Native Resolution : {}x{} px ({:?})",
@@ -88,12 +88,13 @@ fn main() {
             streaming.load_radius, streaming.unload_radius, streaming.max_tasks_per_frame
         );
         println!(
-            " Loaded Content    : {} total ({} Items, {} Classes, {} Entities, {} Tiles)",
+            " Loaded Content    : {} total ({} Items, {} Classes, {} Entities, {} Tiles, {} Weapons)",
             registries.total_definitions(),
             registries.items.len(),
             registries.classes.len(),
             registries.entities.len(),
-            registries.tiles.len()
+            registries.tiles.len(),
+            registries.weapons.len()
         );
         println!(" Loaded Mods       : {}", mods.loaded_mods().len());
         println!(" Initial GameState : {:?}", state.get());

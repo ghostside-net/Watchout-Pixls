@@ -378,11 +378,13 @@ impl Plugin for WorldPlugin {
                     queue_chunk_streaming_system,
                     poll_chunk_streaming_tasks_system,
                 )
-                    .chain(),
+                    .chain()
+                    .after(crate::state::setup_in_game_scene_system),
             )
             .add_systems(
                 OnExit(GameState::InGame),
-                persist_and_clear_active_chunks_on_exit_system,
+                persist_and_clear_active_chunks_on_exit_system
+                    .before(crate::state::cleanup_in_game_scene_system),
             )
             .add_systems(
                 Update,
@@ -393,6 +395,7 @@ impl Plugin for WorldPlugin {
                     poll_chunk_streaming_tasks_system,
                 )
                     .chain()
+                    .after(crate::state::in_game_update_system)
                     .run_if(in_state(GameState::InGame)),
             );
     }

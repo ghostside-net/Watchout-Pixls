@@ -171,7 +171,7 @@ impl InteractableTrigger {
         Self {
             id: id.into(),
             mode,
-            range_px: 16.0,
+            range_px: 10.0,
             require_facing: false,
             enabled: true,
             kind: InteractableKind::InstanceExit,
@@ -817,6 +817,8 @@ impl Plugin for Phase3GameplayPlugin {
                     update_y_sorting_system,
                 )
                     .chain()
+                    .after(crate::world::handle_hero_move_events_system)
+                    .before(crate::world::sync_camera_to_hero_system)
                     .run_if(in_state(GameState::InGame)),
             );
     }

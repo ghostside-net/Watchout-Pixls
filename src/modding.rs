@@ -73,6 +73,9 @@ pub struct ModManifest {
     /// Relative paths to tile definition files (`.ron` / `.json`).
     #[serde(default)]
     pub tiles_files: Vec<String>,
+    /// Relative paths to weapon definition files (`.ron` / `.json`).
+    #[serde(default)]
+    pub weapons_files: Vec<String>,
     /// Optional relative path to a dynamic shared library (`.dll` / `.so` / `.dylib`).
     #[serde(default)]
     pub dynamic_library: Option<String>,
@@ -197,6 +200,16 @@ impl ModManager {
         for rel in &manifest.tiles_files {
             registries
                 .tiles
+                .load_list_from_file(base.join(rel))
+                .map_err(|source| ModError::Content {
+                    mod_id: mod_id.clone(),
+                    source,
+                })?;
+        }
+
+        for rel in &manifest.weapons_files {
+            registries
+                .weapons
                 .load_list_from_file(base.join(rel))
                 .map_err(|source| ModError::Content {
                     mod_id: mod_id.clone(),

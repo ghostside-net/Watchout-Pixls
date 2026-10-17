@@ -228,7 +228,8 @@ impl Plugin for GameStatePlugin {
                     main_menu_update_system.run_if(in_state(GameState::MainMenu)),
                     in_game_update_system.run_if(in_state(GameState::InGame)),
                     paused_update_system.run_if(in_state(GameState::Paused)),
-                ),
+                )
+                    .chain(),
             );
     }
 }
