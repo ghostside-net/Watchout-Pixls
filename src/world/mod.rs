@@ -15,12 +15,12 @@ pub mod persistence;
 pub mod streaming;
 
 pub use coords::{
-    ChunkCoord, GridError, LocalTileCoord, TileCoord, WorldGridConfig, DEFAULT_CHUNK_SIZE_TILES,
-    DEFAULT_TILE_SIZE_PX,
+    ChunkCoord, GridError, LocalTileCoord, TileCoord, TilePos, WorldGridConfig, WorldPos,
+    DEFAULT_CHUNK_SIZE_TILES, DEFAULT_TILE_SIZE_PX,
 };
 pub use generation::{
-    BiomeKind, ChunkData, ResourceKind, ResourceNode, TerrainTileKind, TileCell, WallKind,
-    WorldGenerator,
+    BiomeKind, ChunkData, ResourceKind, ResourceNode, TerrainTileKind, TileCell, TileCollision,
+    WallKind, WorldGenerator,
 };
 pub use noise::{splitmix64, FastNoise2d, WorldSeed};
 pub use persistence::{
@@ -37,6 +37,8 @@ use bevy::prelude::*;
 
 use crate::content::{GameContentRegistries, TileDefinition};
 use crate::palette_sprite::{PastelGameBoyPalette, RgbaColor, WorldPixelPos};
+use crate::player::{resolve_subtile_movement, FacingDirection, PlayerHitbox, PlayerState};
+use crate::scene::SceneManager;
 use crate::state::{GameState, HeroController};
 use crate::window_render::{PixelCanvas, PixelPerfectCamera2d};
 
@@ -52,16 +54,30 @@ pub enum HeroMoveEvent {
 }
 
 /// System that processes [`HeroMoveEvent`]s and updates the Hero's [`WorldPixelPos`].
+#[allow(clippy::type_complexity)]
 pub fn handle_hero_move_events_system(
     mut events: EventReader<HeroMoveEvent>,
     grid_config: Res<WorldGridConfig>,
     world_map: Res<WorldMap>,
-    mut hero_query: Query<&mut WorldPixelPos, With<HeroController>>,
+    scene_manager: Option<Res<SceneManager>>,
+    mut hero_query: Query<
+        (
+            &mut WorldPixelPos,
+            Option<&PlayerHitbox>,
+            Option<&mut FacingDirection>,
+            Option<&mut PlayerState>,
+        ),
+        With<HeroController>,
+    >,
 ) {
-    let Some(mut hero_pos) = hero_query.iter_mut().next() else {
+    let Some((mut hero_pos, opt_hitbox, mut opt_facing, mut opt_state)) =
+        hero_query.iter_mut().next()
+    else {
         events.clear();
         return;
     };
+
+    let hitbox = opt_hitbox.copied().unwrap_or_default();
 
     for event in events.read() {
         match *event {
@@ -69,16 +85,38 @@ pub fn handle_hero_move_events_system(
                 delta,
                 check_collision,
             } => {
-                let target_px = hero_pos.to_vec2() + delta;
+                if let Some(ref mut facing) = opt_facing {
+                    if let Some(dir) = FacingDirection::from_vec2(delta) {
+                        **facing = dir;
+                    }
+                }
                 if check_collision {
-                    let target_tile = grid_config.world_pixel_to_tile(target_px);
-                    let walkable = world_map
-                        .get_tile(target_tile, &grid_config)
-                        .is_none_or(TileCell::is_walkable);
-                    if walkable {
-                        *hero_pos = WorldPixelPos::new(target_px.x, target_px.y);
+                    let current = WorldPos::from(*hero_pos);
+                    let (new_pos, applied) = match scene_manager
+                        .as_deref()
+                        .and_then(SceneManager::current_instance)
+                    {
+                        Some(dungeon) => {
+                            resolve_subtile_movement(current, &hitbox, delta, dungeon, &grid_config)
+                        }
+                        None => resolve_subtile_movement(
+                            current,
+                            &hitbox,
+                            delta,
+                            &*world_map,
+                            &grid_config,
+                        ),
+                    };
+                    *hero_pos = new_pos.to_world_pixel_pos();
+                    if let Some(ref mut state) = opt_state {
+                        **state = if applied.length_squared() > 0.0 {
+                            PlayerState::Moving
+                        } else {
+                            PlayerState::Idle
+                        };
                     }
                 } else {
+                    let target_px = hero_pos.to_vec2() + delta;
                     *hero_pos = WorldPixelPos::new(target_px.x, target_px.y);
                 }
             }

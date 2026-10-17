@@ -159,6 +159,34 @@ impl ResourceNode {
     }
 }
 
+/// Collision property of a world or instance tile (Phase 3).
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+pub enum TileCollision {
+    /// Walkable ground with no physical obstacle.
+    #[default]
+    None,
+    /// Deep water hazard that blocks walking unless amphibious/swimming.
+    Water,
+    /// Solid wall, cliff, pillar, or out-of-bounds boundary that blocks movement.
+    Solid,
+}
+
+impl TileCollision {
+    /// Returns `true` if a walking player/entity can traverse this tile (`TileCollision::None`).
+    #[must_use]
+    pub const fn is_walkable(self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    /// Returns `true` if this tile blocks walking movement (`Solid` or `Water`).
+    #[must_use]
+    pub const fn is_blocking(self) -> bool {
+        !self.is_walkable()
+    }
+}
+
 /// Complete state of a single tile cell within a chunk.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TileCell {
@@ -180,10 +208,24 @@ impl Default for TileCell {
 }
 
 impl TileCell {
+    /// Evaluates the [`TileCollision`] state of this tile cell.
+    #[must_use]
+    pub const fn collision(&self) -> TileCollision {
+        if self.wall.is_some() {
+            TileCollision::Solid
+        } else if matches!(self.terrain, TerrainTileKind::DeepWater) {
+            TileCollision::Water
+        } else if !self.terrain.is_base_walkable() {
+            TileCollision::Solid
+        } else {
+            TileCollision::None
+        }
+    }
+
     /// Returns `true` if an entity can walk onto this tile cell (walkable ground and no blocking wall).
     #[must_use]
     pub const fn is_walkable(&self) -> bool {
-        self.wall.is_none() && self.terrain.is_base_walkable()
+        self.collision().is_walkable()
     }
 
     /// Returns `true` if this tile cell is part of a generated or player-built road/path.

@@ -364,16 +364,21 @@ pub struct PaletteVerificationSwatches {
 /// System that renders all visible chunks, tiles, palette swatches, and sprites through
 /// the `PixelPerfectCamera2d` onto the native `PixelCanvas`, then executes
 /// strict Nearest-Neighbor integer scaling.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn render_pixel_scene_system(
     palette: Res<PastelGameBoyPalette>,
     mut canvas: ResMut<PixelCanvas>,
     world_map: Option<Res<crate::world::WorldMap>>,
     grid_config: Option<Res<crate::world::WorldGridConfig>>,
+    scene_manager: Option<Res<crate::scene::SceneManager>>,
     camera_query: Query<&PixelPerfectCamera2d>,
     tile_query: Query<(&WorldPixelPos, &TileSprite)>,
     swatch_query: Query<&PaletteVerificationSwatches>,
-    sprite_query: Query<(&WorldPixelPos, &PixelSprite)>,
+    sprite_query: Query<(
+        &WorldPixelPos,
+        &PixelSprite,
+        Option<&crate::interaction::OverworldPropEntity>,
+    )>,
 ) {
     // 1. Clear native canvas with Palette Index 0 (Cream Mist)
     let bg_color = palette.lookup(0).unwrap_or(RgbaColor::BLACK);
@@ -383,26 +388,35 @@ pub fn render_pixel_scene_system(
         PixelPerfectCamera2d::new(canvas.native_width(), canvas.native_height())
     });
 
-    // 2. Render procedural active chunk tiles visible within the camera viewport
-    if let (Some(world_map), Some(grid_config)) = (world_map, grid_config) {
-        crate::world::render_visible_chunks_to_canvas(
-            &mut canvas,
-            &palette,
-            &camera,
-            &world_map,
-            &grid_config,
-        );
+    let active_instance = scene_manager
+        .as_deref()
+        .and_then(crate::scene::SceneManager::current_instance);
+
+    if let Some(dungeon) = active_instance {
+        // 2a. Render instanced Dungeon / Prefab map
+        crate::scene::render_instance_to_canvas(&mut canvas, &palette, &camera, dungeon);
+    } else {
+        // 2b. Render procedural active chunk tiles visible within the camera viewport
+        if let (Some(world_map), Some(grid_config)) = (world_map, grid_config) {
+            crate::world::render_visible_chunks_to_canvas(
+                &mut canvas,
+                &palette,
+                &camera,
+                &world_map,
+                &grid_config,
+            );
+        }
+
+        // 3. Render explicit background TileSprite entities using integer-snapped camera coordinates
+        for (pos, tile) in &tile_query {
+            let screen_px = camera.world_to_screen_pixel(pos.to_vec2());
+            let _ = tile
+                .grid
+                .blit_to_canvas(&mut canvas, &palette, screen_px.x, screen_px.y);
+        }
     }
 
-    // 3. Render explicit background TileSprite entities using integer-snapped camera coordinates
-    for (pos, tile) in &tile_query {
-        let screen_px = camera.world_to_screen_pixel(pos.to_vec2());
-        let _ = tile
-            .grid
-            .blit_to_canvas(&mut canvas, &palette, screen_px.x, screen_px.y);
-    }
-
-    // 3. Render Palette Verification Swatches (if present in current scene)
+    // 4. Render Palette Verification Swatches (if present in current scene)
     for swatches in &swatch_query {
         for (i, &color) in palette.colors().iter().enumerate() {
             let x = swatches.screen_x + (i as i32) * (swatches.swatch_size as i32);
@@ -416,9 +430,14 @@ pub fn render_pixel_scene_system(
         }
     }
 
-    // 4. Render foreground Sprites sorted by z_order
-    let mut sprites: Vec<(&WorldPixelPos, &PixelSprite)> = sprite_query.iter().collect();
-    sprites.sort_by_key(|(_, s)| s.z_order);
+    // 5. Render foreground Sprites sorted by (z_order, y_position) for Y-sorting
+    let in_instance = active_instance.is_some();
+    let mut sprites: Vec<(&WorldPixelPos, &PixelSprite)> = sprite_query
+        .iter()
+        .filter(|(_, _, is_overworld_prop)| !(in_instance && is_overworld_prop.is_some()))
+        .map(|(pos, sprite, _)| (pos, sprite))
+        .collect();
+    sprites.sort_by_key(|(pos, s)| (s.z_order, pos.y.round() as i32));
 
     for (pos, sprite) in sprites {
         let screen_px = camera.world_to_screen_pixel(pos.to_vec2());
@@ -427,7 +446,7 @@ pub fn render_pixel_scene_system(
             .blit_to_canvas(&mut canvas, &palette, screen_px.x, screen_px.y);
     }
 
-    // 5. Perform Nearest-Neighbor integer upscaling to physical window buffer
+    // 6. Perform Nearest-Neighbor integer upscaling to physical window buffer
     canvas.upscale_nearest_neighbor();
 }
 

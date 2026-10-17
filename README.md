@@ -28,7 +28,7 @@ Wir setzen auf **Bevy (0.15)** in einem bewusst schlanken, fokussierten 2D-Setup
 
 ---
 
-## 📦 Aktueller Stand (Phase 1 & Phase 2)
+## 📦 Aktueller Stand (Phase 1, Phase 2 & Phase 3)
 
 1. **Fenster & Rendering ([`src/window_render.rs`](src/window_render.rs)):**
    - Native Retro-Auflösung (`320x240` Standard, `480x270` Widescreen-Modus).
@@ -44,10 +44,14 @@ Wir setzen auf **Bevy (0.15)** in einem bewusst schlanken, fokussierten 2D-Setup
 4. **State Machine ([`src/state.rs`](src/state.rs)):**
    - Robuste Bevy-Zustandsverwaltung (`GameState::MainMenu`, `GameState::InGame`, `GameState::Paused`).
 5. **Kern-Weltsystem ([`src/world/`](src/world/mod.rs)):**
-   - **Koordinaten & Raster ([`src/world/coords.rs`](src/world/coords.rs)):** Tile-basiertes System (`16x16` Pixel pro Feld) und Einteilung in feste Chunks (`16x16` Tiles = 256 Tiles pro Chunk) mit euklidischer Koordinatenumrechnung (`TileCoord`, `ChunkCoord`, `LocalTileCoord`) über alle positiven und negativen Quadranten.
+   - **Koordinaten & Raster ([`src/world/coords.rs`](src/world/coords.rs)):** Tile-basiertes System (`16x16` Pixel pro Feld) und Einteilung in feste Chunks (`16x16` Tiles = 256 Tiles pro Chunk) mit euklidischer Koordinatenumrechnung (`TileCoord`, `TilePos`, `WorldPos`, `ChunkCoord`, `LocalTileCoord`) über alle positiven und negativen Quadranten.
    - **Prozedurale Weltgenerierung ([`src/world/noise.rs`](src/world/noise.rs), [`src/world/generation.rs`](src/world/generation.rs)):** Deterministischer 2D-Noise-Generator (`FastNoise2d`: Simplex, Perlin, FBm, Ridged Multifractal & SplitMix64-Tile-Hashing) auf Basis von `WorldSeed` für 5 Biome (`PastelMeadow`, `BreezeLake`, `LavenderForest`, `CobbleHighlands`, `SunlitGlade`), zusammenhängende Wege (`DirtPath`), Wände (`WallKind`) und abbaubare Ressourcen (`ResourceNode`).
    - **Streaming & Multithreading ([`src/world/streaming.rs`](src/world/streaming.rs)):** Dynamisches Laden aktiver Chunks im Radius um den Spieler via `bevy::tasks::AsyncComputeTaskPool` ohne Framedrops sowie Hysterese-basiertes Entladen entfernter Chunks.
-   - **Persistenz & Speichersystem ([`src/world/persistence.rs`](src/world/persistence.rs)):** Effiziente Speicherung erforschter Gebiete (`ExploredChunkRecord`) und modifizierter Chunks (`ChunkData` & `TileDelta`) in kompaktem Binärformat (`WPX2` + CRC32 + Zlib) sowie komprimiertem/unkomprimiertem RON und JSON. Unberührte Chunks werden beim Entladen verworfen und bei Rückkehr deterministisch aus dem `WorldSeed` reproduziert.
+   - **Persistenz & Speichersystem ([`src/world/persistence.rs`](src/world/persistence.rs)):** Effiziente Speicherung erforschter Gebiete (`ExploredChunkRecord`) und modifizierter Chunks (`ChunkData` & `TileDelta`) in kompaktem Binärformat (`WPX2` + CRC32 + Zlib) sowie komprimiertem/unkomprimiertem RON und JSON.
+6. **Player Controller, Sub-Tile-Kollision & Instanziierte Szenen ([`src/player.rs`](src/player.rs), [`src/interaction.rs`](src/interaction.rs), [`src/scene.rs`](src/scene.rs)):**
+   - **8-Wege-Movement & Sliding-Kollision ([`src/player.rs`](src/player.rs)):** Geschwindigkeitsnormalisierung bei Diagonalschritten, Sub-Tile-Bewegung (`WorldPos`) mit achsengetrennter AABB-Sliding-Kollision (`resolve_subtile_movement`), Anti-Tunneling-Sub-Stepping, Y-Sorting (`YSort`) und `PlayerState` (`Idle`, `Moving`, `Interacting`, `Transitioning`).
+   - **Interaktions- & Trigger-System ([`src/interaction.rs`](src/interaction.rs)):** `Interactable`-Trait und `InteractableTrigger` mit Unterscheidung zwischen automatischen Tile-Triggern (`TriggerMode::Automatic`) und interaktiven Tür-/Truhen-/NPC-Triggern (`TriggerMode::Interactive`, Taste `E` / `Leertaste`).
+   - **Szenen-Management, BSP-Dungeons & Statische Prefabs ([`src/scene.rs`](src/scene.rs)):** `SceneManager` (`Scene::Overworld(OverworldState)` <-> `Scene::Instance(DungeonState)`) mit exakter Speicherung des Overworld-Rückkehrpunkts (`return_position`), deterministischer BSP-Dungeon-Generator (`generate_bsp_dungeon`) inklusive Flood-Fill-Pfadvalidierung sowie `PrefabLoader` für RON/JSON-Innenräume ([`assets/prefabs/starter_house.ron`](assets/prefabs/starter_house.ron), [`assets/prefabs/village_shrine.json`](assets/prefabs/village_shrine.json)).
 
 ---
 
@@ -111,7 +115,7 @@ cargo test
 
 - [x] **Phase 1:** Fenster, ECS-Pipeline, Pastell-Palette, Content-Traits.
 - [x] **Phase 2:** Prozedurales Chunk-Grid, Simplex-Noise-Biomgenerierung, Chunk-Streaming & binäre Serialisierung.
-- [ ] **Phase 3:** Top-Down Controller mit Sub-Tile-Kollision, interaktive Kacheln, instanziierte Dungeon-Karten.
+- [x] **Phase 3:** Top-Down Controller mit Sub-Tile-Kollision, interaktive Kacheln, instanziierte Dungeon-Karten.
 - [ ] **Phase 4:** Klassen-Fortschritt, Skilltree, Gegner-Zustandsmaschinen, Endboss-Mechanik & Checkpoint-Autosave.
 - [ ] **Phase 5:** Autonomer Runtime-Mod-Loader (`/mods`), erweiterte Fehlerbehandlung und In-Game-Mod-Übersicht.
 

@@ -18,11 +18,30 @@
 pub mod content;
 #[cfg(feature = "desktop-window")]
 pub mod desktop;
+pub mod interaction;
 pub mod modding;
 pub mod palette_sprite;
+pub mod player;
+pub mod scene;
 pub mod state;
 pub mod window_render;
 pub mod world;
+
+pub use interaction::{
+    can_trigger_interaction, Interactable, InteractableKind, InteractableTrigger,
+    InteractionOutcomeEvent, Phase3GameplayPlugin, PlayerInteractEvent, TriggerMode,
+};
+pub use player::{
+    check_aabb_collision, compute_normalized_movement_delta, compute_y_sort_order,
+    overlapped_tiles_for_aabb, resolve_subtile_movement, Aabb, CollisionMap, FacingDirection,
+    FixedCollisionGrid, PlayerHitbox, PlayerInputState, PlayerMovement, PlayerState, YSort,
+};
+pub use scene::{
+    generate_bsp_dungeon, BspDungeonConfig, BspRoom, DungeonGenError, DungeonState, InstanceProp,
+    InstancePropKind, InstanceSource, InstanceTile, OverworldState, PrefabDefinition, PrefabError,
+    PrefabLoader, Scene, SceneManager, SceneTransitionEvent,
+};
+pub use world::{TileCollision, TilePos, WorldPos};
 
 use std::path::Path;
 
@@ -36,7 +55,7 @@ use crate::state::GameStatePlugin;
 use crate::window_render::{RetroWindowConfig, WindowAndRenderPlugin};
 use crate::world::WorldPlugin;
 
-/// Modular Bevy `PluginGroup` bundling all Phase 1 & Phase 2 core plugins for `watchout_pixls`.
+/// Modular Bevy `PluginGroup` bundling all Phase 1, Phase 2 & Phase 3 core plugins for `watchout_pixls`.
 #[derive(Default)]
 pub struct WatchoutPixlsPlugins {
     pub window_config: RetroWindowConfig,
@@ -68,7 +87,8 @@ impl PluginGroup for WatchoutPixlsPlugins {
             .add(PaletteAndSpritePlugin::new(self.palette))
             .add(ContentPlugin)
             .add(GameStatePlugin)
-            .add(self.world_plugin);
+            .add(self.world_plugin)
+            .add(Phase3GameplayPlugin);
 
         let mut content_pack_dir: Option<std::path::PathBuf> = None;
         let cwd_pack = Path::new("assets/content");
@@ -733,5 +753,267 @@ mod tests {
         ));
 
         let _ = &mut untouched;
+    }
+
+    #[test]
+    fn test_player_diagonal_movement_normalization() {
+        let speed = 100.0;
+        let dt = 0.1; // Expected travel distance = 10.0 px regardless of direction
+
+        let cardinal_right = compute_normalized_movement_delta(Vec2::new(1.0, 0.0), speed, dt);
+        let cardinal_up = compute_normalized_movement_delta(Vec2::new(0.0, -1.0), speed, dt);
+        let diagonal_ne = compute_normalized_movement_delta(Vec2::new(1.0, -1.0), speed, dt);
+        let diagonal_sw = compute_normalized_movement_delta(Vec2::new(-1.0, 1.0), speed, dt);
+
+        assert!((cardinal_right.length() - 10.0).abs() < 1e-5);
+        assert!((cardinal_up.length() - 10.0).abs() < 1e-5);
+
+        // Diagonal distance must NOT be sqrt(2) * 10.0 (~14.1421), it must be normalized to 10.0
+        assert!((diagonal_ne.length() - 10.0).abs() < 1e-5);
+        assert!((diagonal_sw.length() - 10.0).abs() < 1e-5);
+        assert!((diagonal_ne.x - 10.0 * std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-5);
+        assert!((diagonal_ne.y + 10.0 * std::f32::consts::FRAC_1_SQRT_2).abs() < 1e-5);
+
+        // Zero input or non-positive dt yields zero movement
+        assert_eq!(
+            compute_normalized_movement_delta(Vec2::ZERO, speed, dt),
+            Vec2::ZERO
+        );
+        assert_eq!(
+            compute_normalized_movement_delta(Vec2::ONE, speed, 0.0),
+            Vec2::ZERO
+        );
+    }
+
+    #[test]
+    fn test_aabb_tile_collision_solid() {
+        use crate::world::WorldGridConfig;
+
+        let grid = WorldGridConfig::default(); // 16x16 px per tile
+        let mut map = FixedCollisionGrid::new_walkable(10, 10);
+        // Place a solid wall at tile (1, 0) -> world X in [16.0, 32.0), Y in [0.0, 16.0)
+        map.set_collision(TilePos(1, 0), TileCollision::Solid);
+        map.set_collision(TilePos(0, 2), TileCollision::Water);
+
+        let hitbox = PlayerHitbox::new(Vec2::new(2.0, 4.0), Vec2::new(8.0, 8.0));
+
+        // 1. AABB entirely inside walkable tile (0, 0) -> no collision
+        let safe_pos = WorldPos(2.0, 2.0);
+        assert!(!check_aabb_collision(hitbox.aabb_at(safe_pos), &map, &grid));
+
+        // 2. AABB intersects solid tile (1, 0) -> collision detected & movement blocked
+        let overlapping_pos = WorldPos(10.0, 2.0); // hitbox X: [12.0, 20.0) overlaps tile (1, 0)
+        assert!(check_aabb_collision(
+            hitbox.aabb_at(overlapping_pos),
+            &map,
+            &grid
+        ));
+
+        let (resolved_pos, applied_delta) = resolve_subtile_movement(
+            WorldPos(6.0, 2.0),
+            &hitbox,
+            Vec2::new(4.0, 0.0),
+            &map,
+            &grid,
+        );
+        assert_eq!(resolved_pos, WorldPos(6.0, 2.0));
+        assert_eq!(applied_delta, Vec2::ZERO);
+
+        // 3. Out-of-bounds negative tile (-1, 0) deterministically acts as Solid without panic
+        assert_eq!(
+            map.tile_collision_at(TilePos(-1, 0), &grid),
+            TileCollision::Solid
+        );
+        assert!(check_aabb_collision(
+            hitbox.aabb_at(WorldPos(-4.0, 2.0)),
+            &map,
+            &grid
+        ));
+    }
+
+    #[test]
+    fn test_aabb_sliding_collision() {
+        use crate::world::WorldGridConfig;
+
+        let grid = WorldGridConfig::default(); // 16x16 px per tile
+        let mut map = FixedCollisionGrid::new_walkable(10, 10);
+        // Vertical wall along column x = 1 (tiles (1, 0), (1, 1), (1, 2))
+        map.set_collision(TilePos(1, 0), TileCollision::Solid);
+        map.set_collision(TilePos(1, 1), TileCollision::Solid);
+        map.set_collision(TilePos(1, 2), TileCollision::Solid);
+
+        // Hitbox of size 8x8 at offset (0, 0); starting at (8.0, 4.0) so right edge is flush at x = 16.0
+        let hitbox = PlayerHitbox::new(Vec2::ZERO, Vec2::new(8.0, 8.0));
+        let start_pos = WorldPos(8.0, 4.0);
+
+        // Move diagonally into the vertical wall: (+5.0 on X, +6.0 on Y)
+        // X movement is blocked by the wall at x = 16.0 (X delta = 0.0), while Y movement slides freely (+6.0)!
+        let (end_pos, applied_delta) =
+            resolve_subtile_movement(start_pos, &hitbox, Vec2::new(5.0, 6.0), &map, &grid);
+
+        assert!((applied_delta.x - 0.0).abs() < 1e-5);
+        assert!((applied_delta.y - 6.0).abs() < 1e-5);
+        assert_eq!(end_pos, WorldPos(8.0, 10.0));
+
+        // Verify anti-tunneling: a huge horizontal delta (e.g. +48.0 px across a 16px wall) must NOT tunnel through column x = 1
+        let (anti_tunnel_pos, _) =
+            resolve_subtile_movement(start_pos, &hitbox, Vec2::new(48.0, 0.0), &map, &grid);
+        assert_eq!(anti_tunnel_pos.0, 8.0);
+    }
+
+    #[test]
+    fn test_bsp_dungeon_connectivity() {
+        let config = BspDungeonConfig {
+            width: 36,
+            height: 28,
+            max_depth: 3,
+            min_leaf_size: 7,
+            min_room_size: 4,
+            tile_size_px: 16,
+        };
+
+        // Test determinism and Flood-Fill connectivity across multiple seeds
+        for seed in [1_u64, 42, 1337, 987_654_321, 0xCAFE_BABE_DEAD_BEEF] {
+            let d1 = generate_bsp_dungeon("dungeon.test", seed, &config).unwrap();
+            let d2 = generate_bsp_dungeon("dungeon.test", seed, &config).unwrap();
+
+            // Must be bit-identical for the same seed
+            assert_eq!(d1, d2);
+            assert!(d1.rooms.len() >= 2);
+            assert_ne!(d1.spawn_tile, d1.exit_tile);
+
+            // Spawn and Exit must be walkable
+            assert_eq!(d1.collision_at(d1.spawn_tile), TileCollision::None);
+            assert_eq!(d1.collision_at(d1.exit_tile), TileCollision::None);
+
+            // Flood-Fill from spawn_tile must reach exit_tile and all room centers
+            let reachable = d1.flood_fill_reachable_from(d1.spawn_tile);
+            assert!(
+                reachable.contains(&d1.exit_tile),
+                "BSP dungeon seed {seed} failed Flood-Fill connectivity from spawn to exit"
+            );
+            assert!(d1.is_connected_spawn_to_exit());
+
+            // Out-of-bounds must deterministically return TileCollision::Solid
+            assert_eq!(d1.collision_at(TilePos(-1, -1)), TileCollision::Solid);
+            assert_eq!(
+                d1.collision_at(TilePos(config.width as i32, config.height as i32)),
+                TileCollision::Solid
+            );
+        }
+    }
+
+    #[test]
+    fn test_prefab_deserialization_success() {
+        // 1. Load valid RON prefab from string
+        let ron_prefab = concat!(
+            "(\n",
+            "    id: \"prefab.test_cottage\",\n",
+            "    display_name: \"Test Cottage\",\n",
+            "    width: 8,\n",
+            "    height: 6,\n",
+            "    rows: [\n",
+            "        \"########\",\n",
+            "        \"#..C...#\",\n",
+            "        \"#..N...#\",\n",
+            "        \"#..S...#\",\n",
+            "        \"#..E...#\",\n",
+            "        \"########\",\n",
+            "    ],\n",
+            "    legend: {\n",
+            "        '#': \"tile.pastel_cobble\",\n",
+            "        '.': \"tile.pastel_path\",\n",
+            "        'S': \"tile.pastel_path\",\n",
+            "        'E': \"tile.buttercup_sand\",\n",
+            "    },\n",
+            ")"
+        );
+        let state = PrefabLoader::load_from_str(ron_prefab, DataFormat::Ron, None).unwrap();
+        assert_eq!(state.instance_id, "prefab.test_cottage");
+        assert_eq!(state.width, 8);
+        assert_eq!(state.height, 6);
+        assert_eq!(state.spawn_tile, TilePos(3, 3));
+        assert_eq!(state.exit_tile, TilePos(3, 4));
+        assert_eq!(state.collision_at(TilePos(0, 0)), TileCollision::Solid);
+        assert_eq!(state.collision_at(TilePos(3, 3)), TileCollision::None);
+        assert!(state.is_connected_spawn_to_exit());
+
+        // 2. Load valid asset files from disk (RON and JSON)
+        let house_from_disk =
+            PrefabLoader::load_from_file("assets/prefabs/starter_house.ron", None).unwrap();
+        assert_eq!(house_from_disk.instance_id, "prefab.starter_house");
+        assert!(house_from_disk.is_connected_spawn_to_exit());
+
+        let shrine_from_disk =
+            PrefabLoader::load_from_file("assets/prefabs/village_shrine.json", None).unwrap();
+        assert_eq!(shrine_from_disk.instance_id, "prefab.village_shrine");
+        assert_eq!(
+            shrine_from_disk.collision_at(TilePos(1, 1)),
+            TileCollision::Water
+        );
+    }
+
+    #[test]
+    fn test_prefab_deserialization_invalid_format() {
+        // 1. Malformed syntax -> returns RonParse / JsonParse error without panicking
+        let malformed_ron = "( id: \"broken\", width: 5, ";
+        assert!(matches!(
+            PrefabLoader::load_from_str(malformed_ron, DataFormat::Ron, None),
+            Err(PrefabError::RonParse(_))
+        ));
+
+        // 2. Dimension mismatch (declared height 5, only 3 rows provided)
+        let bad_rows = concat!(
+            "(\n",
+            "    id: \"prefab.bad_rows\",\n",
+            "    display_name: \"Bad Rows\",\n",
+            "    width: 4,\n",
+            "    height: 5,\n",
+            "    rows: [\"####\", \"#S.#\", \"####\"],\n",
+            ")"
+        );
+        assert!(matches!(
+            PrefabLoader::load_from_str(bad_rows, DataFormat::Ron, None),
+            Err(PrefabError::RowCountMismatch { .. })
+        ));
+
+        // 3. Unknown tile ID in legend -> returns UnknownTileId error
+        let unknown_tile_id = concat!(
+            "(\n",
+            "    id: \"prefab.bad_tile\",\n",
+            "    display_name: \"Bad Tile\",\n",
+            "    width: 4,\n",
+            "    height: 4,\n",
+            "    rows: [\"####\", \"#SE#\", \"#..#\", \"####\"],\n",
+            "    legend: { '.': \"tile.non_existent_quantum_void\" },\n",
+            ")"
+        );
+        assert!(matches!(
+            PrefabLoader::load_from_str(unknown_tile_id, DataFormat::Ron, None),
+            Err(PrefabError::UnknownTileId { .. })
+        ));
+
+        // 4. Unknown ASCII symbol in rows -> returns UnknownTileSymbol error
+        let unknown_symbol = concat!(
+            "(\n",
+            "    id: \"prefab.bad_symbol\",\n",
+            "    display_name: \"Bad Symbol\",\n",
+            "    width: 4,\n",
+            "    height: 4,\n",
+            "    rows: [\"####\", \"#S?#\", \"#E.#\", \"####\"],\n",
+            ")"
+        );
+        assert!(matches!(
+            PrefabLoader::load_from_str(unknown_symbol, DataFormat::Ron, None),
+            Err(PrefabError::UnknownTileSymbol { symbol: '?', .. })
+        ));
+
+        // 5. Fallback loader handles non-existent / corrupt files gracefully without panicking
+        let fallback =
+            PrefabLoader::load_from_file_or_fallback("assets/prefabs/does_not_exist.ron", None);
+        assert_eq!(
+            fallback.collision_at(fallback.spawn_tile),
+            TileCollision::None
+        );
     }
 }

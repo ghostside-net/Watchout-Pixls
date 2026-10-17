@@ -52,7 +52,7 @@ fn main() {
         let streaming = app.world().resource::<ChunkStreamingConfig>();
 
         println!("============================================================");
-        println!(" watchout_pixls — Phase 1 & 2 (Bevy ECS + Procedural World)");
+        println!(" watchout_pixls — Phase 1, 2 & 3 (ECS + World + Dungeons)");
         println!("============================================================");
         println!(
             " Native Resolution : {}x{} px ({:?})",
@@ -118,12 +118,16 @@ fn main() {
     let world_map = app.world().resource::<WorldMap>();
     let persistence = app.world().resource::<WorldPersistence>();
     let stream_metrics = app.world().resource::<WorldStreamingMetrics>();
+    let scene_manager = app
+        .world()
+        .resource::<watchout_pixls::scene::SceneManager>();
     println!(
-        " Headless Render-Test verified in state {:?} (frames: {}, active chunks: {}, explored: {}, async tasks spawned: {})",
+        " Headless Render-Test verified in state {:?} (frames: {}, active chunks: {}, explored: {}, async tasks spawned: {}, in_overworld: {})",
         state,
         canvas.frame_count,
         world_map.active_chunk_count(),
         persistence.explored_chunk_count(),
-        stream_metrics.total_async_tasks_spawned
+        stream_metrics.total_async_tasks_spawned,
+        scene_manager.is_overworld()
     );
 }

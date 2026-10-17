@@ -88,6 +88,159 @@ impl TileCoord {
     }
 }
 
+/// Domain-driven newtype for 2D discrete tile coordinates (`(x, y)` in tiles).
+#[derive(
+    Component,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Serialize,
+    Deserialize,
+)]
+pub struct TilePos(pub i32, pub i32);
+
+impl TilePos {
+    pub const ZERO: Self = Self(0, 0);
+
+    #[must_use]
+    pub const fn new(x: i32, y: i32) -> Self {
+        Self(x, y)
+    }
+
+    #[must_use]
+    pub const fn x(self) -> i32 {
+        self.0
+    }
+
+    #[must_use]
+    pub const fn y(self) -> i32 {
+        self.1
+    }
+
+    #[must_use]
+    pub const fn offset(self, dx: i32, dy: i32) -> Self {
+        Self(self.0 + dx, self.1 + dy)
+    }
+
+    #[must_use]
+    pub const fn to_tile_coord(self) -> TileCoord {
+        TileCoord::new(self.0, self.1)
+    }
+
+    #[must_use]
+    pub const fn manhattan_distance(self, other: Self) -> u32 {
+        self.0.abs_diff(other.0) + self.1.abs_diff(other.1)
+    }
+
+    #[must_use]
+    pub const fn cardinal_neighbors(self) -> [Self; 4] {
+        [
+            Self(self.0, self.1 - 1),
+            Self(self.0 + 1, self.1),
+            Self(self.0, self.1 + 1),
+            Self(self.0 - 1, self.1),
+        ]
+    }
+}
+
+impl From<TileCoord> for TilePos {
+    fn from(coord: TileCoord) -> Self {
+        Self(coord.x, coord.y)
+    }
+}
+
+impl From<TilePos> for TileCoord {
+    fn from(pos: TilePos) -> Self {
+        Self::new(pos.0, pos.1)
+    }
+}
+
+impl From<(i32, i32)> for TilePos {
+    fn from((x, y): (i32, i32)) -> Self {
+        Self(x, y)
+    }
+}
+
+impl From<IVec2> for TilePos {
+    fn from(v: IVec2) -> Self {
+        Self(v.x, v.y)
+    }
+}
+
+/// Domain-driven newtype for continuous 2D sub-tile world coordinates (`(x, y)` in floating-point pixels).
+#[derive(Component, Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct WorldPos(pub f32, pub f32);
+
+impl WorldPos {
+    pub const ZERO: Self = Self(0.0, 0.0);
+
+    #[must_use]
+    pub const fn new(x: f32, y: f32) -> Self {
+        Self(x, y)
+    }
+
+    #[must_use]
+    pub const fn x(self) -> f32 {
+        self.0
+    }
+
+    #[must_use]
+    pub const fn y(self) -> f32 {
+        self.1
+    }
+
+    #[must_use]
+    pub const fn to_vec2(self) -> Vec2 {
+        Vec2::new(self.0, self.1)
+    }
+
+    #[must_use]
+    pub const fn to_world_pixel_pos(self) -> WorldPixelPos {
+        WorldPixelPos::new(self.0, self.1)
+    }
+
+    #[must_use]
+    pub fn distance(self, other: Self) -> f32 {
+        self.to_vec2().distance(other.to_vec2())
+    }
+}
+
+impl From<Vec2> for WorldPos {
+    fn from(v: Vec2) -> Self {
+        Self(v.x, v.y)
+    }
+}
+
+impl From<WorldPos> for Vec2 {
+    fn from(pos: WorldPos) -> Self {
+        Vec2::new(pos.0, pos.1)
+    }
+}
+
+impl From<WorldPixelPos> for WorldPos {
+    fn from(pos: WorldPixelPos) -> Self {
+        Self(pos.x, pos.y)
+    }
+}
+
+impl From<WorldPos> for WorldPixelPos {
+    fn from(pos: WorldPos) -> Self {
+        Self::new(pos.0, pos.1)
+    }
+}
+
+impl From<(f32, f32)> for WorldPos {
+    fn from((x, y): (f32, f32)) -> Self {
+        Self(x, y)
+    }
+}
+
 /// Global 2D chunk coordinate on the infinite world chunk grid.
 #[derive(
     Component,

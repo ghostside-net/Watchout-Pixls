@@ -1,0 +1,28 @@
+(
+    id: "prefab.starter_house",
+    display_name: "Cozy Pastel Cottage",
+    width: 12,
+    height: 10,
+    rows: [
+        "############",
+        "#..D....C..#",
+        "#..........#",
+        "#....N.....#",
+        "#..........#",
+        "#..T....T..#",
+        "#..........#",
+        "#....S.....#",
+        "#....E.....#",
+        "############",
+    ],
+    legend: {
+        '#': "tile.pastel_cobble",
+        '.': "tile.pastel_path",
+        'S': "tile.pastel_path",
+        'E': "tile.buttercup_sand",
+        'C': "tile.pastel_path",
+        'N': "tile.pastel_path",
+        'D': "tile.lavender_floor",
+        'T': "tile.pastel_cobble",
+    },
+)

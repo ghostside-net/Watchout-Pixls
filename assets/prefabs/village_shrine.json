@@ -1,0 +1,27 @@
+{
+    "id": "prefab.village_shrine",
+    "display_name": "Ancient Lavender Shrine",
+    "width": 11,
+    "height": 9,
+    "rows": [
+        "###########",
+        "#~~~.C.~~~#",
+        "#~~~...~~~#",
+        "#..T...T..#",
+        "#....N....#",
+        "#..T...T..#",
+        "#....S....#",
+        "#....E....#",
+        "###########"
+    ],
+    "legend": {
+        "#": "tile.pastel_cobble",
+        ".": "tile.lavender_floor",
+        "~": "tile.deep_water",
+        "S": "tile.pastel_path",
+        "E": "tile.buttercup_sand",
+        "C": "tile.lavender_floor",
+        "N": "tile.lavender_floor",
+        "T": "tile.pastel_cobble"
+    }
+}

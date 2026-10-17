@@ -107,60 +107,98 @@ impl ApplicationHandler for DesktopAppRunner {
                 event_loop.exit();
             }
             WindowEvent::KeyboardInput { event, .. } => {
-                if event.state == ElementState::Pressed {
-                    match event.physical_key {
-                        PhysicalKey::Code(KeyCode::Enter | KeyCode::Space) => {
+                let is_pressed = event.state == ElementState::Pressed;
+                match event.physical_key {
+                    PhysicalKey::Code(KeyCode::KeyW | KeyCode::ArrowUp) => {
+                        if let Some(mut input) = self
+                            .app
+                            .world_mut()
+                            .get_resource_mut::<crate::player::PlayerInputState>()
+                        {
+                            input.up = is_pressed;
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::KeyS | KeyCode::ArrowDown) => {
+                        if let Some(mut input) = self
+                            .app
+                            .world_mut()
+                            .get_resource_mut::<crate::player::PlayerInputState>()
+                        {
+                            input.down = is_pressed;
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::KeyA | KeyCode::ArrowLeft) => {
+                        if let Some(mut input) = self
+                            .app
+                            .world_mut()
+                            .get_resource_mut::<crate::player::PlayerInputState>()
+                        {
+                            input.left = is_pressed;
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::KeyD | KeyCode::ArrowRight) => {
+                        if let Some(mut input) = self
+                            .app
+                            .world_mut()
+                            .get_resource_mut::<crate::player::PlayerInputState>()
+                        {
+                            input.right = is_pressed;
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::KeyE) if is_pressed => {
+                        if let Some(mut input) = self
+                            .app
+                            .world_mut()
+                            .get_resource_mut::<crate::player::PlayerInputState>()
+                        {
+                            input.interact_just_pressed = true;
+                        }
+                        self.app
+                            .world_mut()
+                            .send_event(crate::interaction::PlayerInteractEvent);
+                    }
+                    PhysicalKey::Code(KeyCode::Space) if is_pressed => {
+                        let in_game = self
+                            .app
+                            .world()
+                            .get_resource::<State<crate::state::GameState>>()
+                            .is_some_and(|s| *s.get() == crate::state::GameState::InGame);
+                        if in_game {
+                            if let Some(mut input) =
+                                self.app
+                                    .world_mut()
+                                    .get_resource_mut::<crate::player::PlayerInputState>()
+                            {
+                                input.interact_just_pressed = true;
+                            }
+                            self.app
+                                .world_mut()
+                                .send_event(crate::interaction::PlayerInteractEvent);
+                        } else {
                             self.app
                                 .world_mut()
                                 .send_event(StateTransitionAction::StartGame);
                         }
-                        PhysicalKey::Code(KeyCode::KeyP) => {
-                            self.app
-                                .world_mut()
-                                .send_event(StateTransitionAction::TogglePause);
-                        }
-                        PhysicalKey::Code(KeyCode::Backspace) => {
-                            self.app
-                                .world_mut()
-                                .send_event(StateTransitionAction::ReturnToMainMenu);
-                        }
-                        PhysicalKey::Code(KeyCode::KeyW | KeyCode::ArrowUp) => {
-                            self.app.world_mut().send_event(
-                                crate::world::HeroMoveEvent::TranslatePixels {
-                                    delta: Vec2::new(0.0, -16.0),
-                                    check_collision: true,
-                                },
-                            );
-                        }
-                        PhysicalKey::Code(KeyCode::KeyS | KeyCode::ArrowDown) => {
-                            self.app.world_mut().send_event(
-                                crate::world::HeroMoveEvent::TranslatePixels {
-                                    delta: Vec2::new(0.0, 16.0),
-                                    check_collision: true,
-                                },
-                            );
-                        }
-                        PhysicalKey::Code(KeyCode::KeyA | KeyCode::ArrowLeft) => {
-                            self.app.world_mut().send_event(
-                                crate::world::HeroMoveEvent::TranslatePixels {
-                                    delta: Vec2::new(-16.0, 0.0),
-                                    check_collision: true,
-                                },
-                            );
-                        }
-                        PhysicalKey::Code(KeyCode::KeyD | KeyCode::ArrowRight) => {
-                            self.app.world_mut().send_event(
-                                crate::world::HeroMoveEvent::TranslatePixels {
-                                    delta: Vec2::new(16.0, 0.0),
-                                    check_collision: true,
-                                },
-                            );
-                        }
-                        PhysicalKey::Code(KeyCode::Escape) => {
-                            event_loop.exit();
-                        }
-                        _ => {}
                     }
+                    PhysicalKey::Code(KeyCode::Enter) if is_pressed => {
+                        self.app
+                            .world_mut()
+                            .send_event(StateTransitionAction::StartGame);
+                    }
+                    PhysicalKey::Code(KeyCode::KeyP) if is_pressed => {
+                        self.app
+                            .world_mut()
+                            .send_event(StateTransitionAction::TogglePause);
+                    }
+                    PhysicalKey::Code(KeyCode::Backspace) if is_pressed => {
+                        self.app
+                            .world_mut()
+                            .send_event(StateTransitionAction::ReturnToMainMenu);
+                    }
+                    PhysicalKey::Code(KeyCode::Escape) if is_pressed => {
+                        event_loop.exit();
+                    }
+                    _ => {}
                 }
             }
             WindowEvent::RedrawRequested => {

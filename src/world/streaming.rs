@@ -268,9 +268,18 @@ pub fn queue_chunk_streaming_system(
     mut world_map: ResMut<WorldMap>,
     mut persistence: ResMut<WorldPersistence>,
     mut metrics: ResMut<WorldStreamingMetrics>,
+    scene_manager: Option<Res<crate::scene::SceneManager>>,
     hero_query: Query<&WorldPixelPos, With<HeroController>>,
     camera_query: Query<&PixelPerfectCamera2d>,
 ) {
+    // Pause Overworld chunk streaming/unloading while the player is inside an instanced scene
+    if scene_manager
+        .as_deref()
+        .is_some_and(crate::scene::SceneManager::is_instance)
+    {
+        return;
+    }
+
     // Determine center world position from the Hero entity (or camera center fallback)
     let center_px = if let Some(hero_pos) = hero_query.iter().next() {
         hero_pos.to_vec2()
