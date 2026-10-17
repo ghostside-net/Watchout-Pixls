@@ -1,12 +1,2 @@
 /target
 /dist
-
-# Environment and local configurations
-.env
-.env.*
-!.env.example
-
-# Editor and temporary files
-*.swp
-*.bak
-*~
