@@ -111,7 +111,7 @@ pub struct RetroWindowConfig {
 impl Default for RetroWindowConfig {
     fn default() -> Self {
         Self {
-            title: "watchout_pixls — Phase 1 Retro ECS".to_string(),
+            title: "Watchout Pixls! (v0.1.0)".to_string(),
             resolution: RetroResolutionPreset::Retro320x240,
             scaling: IntegerScaling::Scale3x,
             filter_mode: TextureFilterMode::Nearest,
@@ -321,6 +321,73 @@ impl PixelCanvas {
         }
     }
 
+    /// Draws an outlined axis-aligned rectangle with a specified border thickness.
+    pub fn draw_rect_outline(
+        &mut self,
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+        color: RgbaColor,
+        thickness: u32,
+    ) {
+        let t = thickness as i32;
+        let w = width as i32;
+        let h = height as i32;
+        // Top and bottom borders
+        self.fill_rect(x, y, width, thickness, color);
+        self.fill_rect(x, y + h - t, width, thickness, color);
+        // Left and right borders
+        self.fill_rect(x, y + t, thickness, (height - thickness * 2).max(0), color);
+        self.fill_rect(x + w - t, y + t, thickness, (height - thickness * 2).max(0), color);
+    }
+
+    /// Measures the total pixel width of a text string rendered with scale.
+    #[must_use]
+    pub fn measure_text_width(text: &str, scale: u32) -> i32 {
+        let scale = scale.max(1) as i32;
+        let char_count = text.chars().count() as i32;
+        if char_count == 0 {
+            0
+        } else {
+            char_count * 6 * scale - scale
+        }
+    }
+
+    /// Draws a text string using the authentic 5x7 retro bitmap font.
+    pub fn draw_text(&mut self, start_x: i32, start_y: i32, text: &str, color: RgbaColor, scale: u32) {
+        let scale = scale.max(1);
+        let mut cur_x = start_x;
+        for ch in text.chars() {
+            if ch == '\n' {
+                cur_x = start_x;
+                continue;
+            }
+            let glyph = retro_5x7_glyph(ch);
+            for (row_idx, &row_bits) in glyph.iter().enumerate() {
+                for col_idx in 0..5 {
+                    if (row_bits & (1 << (4 - col_idx))) != 0 {
+                        self.fill_rect(
+                            cur_x + (col_idx as i32) * (scale as i32),
+                            start_y + (row_idx as i32) * (scale as i32),
+                            scale,
+                            scale,
+                            color,
+                        );
+                    }
+                }
+            }
+            cur_x += 6 * (scale as i32);
+        }
+    }
+
+    /// Draws horizontally centered text on the native canvas at vertical position `y`.
+    pub fn draw_text_centered(&mut self, y: i32, text: &str, color: RgbaColor, scale: u32) {
+        let width = Self::measure_text_width(text, scale);
+        let start_x = (self.native_width as i32 - width) / 2;
+        self.draw_text(start_x, y, text, color, scale);
+    }
+
     /// Performs strict **Nearest-Neighbor Integer Upscaling** from the native
     /// retro framebuffer (`native_width x native_height`) into the physical
     /// window buffer (`physical_width x physical_height`).
@@ -421,5 +488,67 @@ impl Plugin for WindowAndRenderPlugin {
         app.insert_resource(self.config.clone())
             .insert_resource(canvas)
             .add_systems(Startup, spawn_pixel_perfect_camera_system);
+    }
+}
+
+/// Returns the 7-row bitmask for a given ASCII character in 5x7 pixel font format.
+/// Each row is 5 bits wide (bits 4..0).
+#[must_use]
+pub fn retro_5x7_glyph(ch: char) -> [u8; 7] {
+    match ch.to_ascii_uppercase() {
+        'A' => [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+        'B' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
+        'C' => [0b01111, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b01111],
+        'D' => [0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110],
+        'E' => [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111],
+        'F' => [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000],
+        'G' => [0b01111, 0b10000, 0b10000, 0b10111, 0b10001, 0b10001, 0b01111],
+        'H' => [0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+        'I' => [0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
+        'J' => [0b00111, 0b00010, 0b00010, 0b00010, 0b00010, 0b10010, 0b01100],
+        'K' => [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
+        'L' => [0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111],
+        'M' => [0b10001, 0b11011, 0b10101, 0b10001, 0b10001, 0b10001, 0b10001],
+        'N' => [0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001],
+        'O' => [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+        'P' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000],
+        'Q' => [0b01110, 0b10001, 0b10001, 0b10001, 0b10101, 0b10010, 0b01101],
+        'R' => [0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001],
+        'S' => [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
+        'T' => [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
+        'U' => [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+        'V' => [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100],
+        'W' => [0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b11011, 0b10001],
+        'X' => [0b10001, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b10001],
+        'Y' => [0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100],
+        'Z' => [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b11111],
+        '0' => [0b01110, 0b10011, 0b10101, 0b10101, 0b11001, 0b10001, 0b01110],
+        '1' => [0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
+        '2' => [0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111],
+        '3' => [0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110],
+        '4' => [0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010],
+        '5' => [0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110],
+        '6' => [0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110],
+        '7' => [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000],
+        '8' => [0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110],
+        '9' => [0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100],
+        ' ' => [0, 0, 0, 0, 0, 0, 0],
+        ':' => [0, 0b01100, 0b01100, 0, 0b01100, 0b01100, 0],
+        '-' => [0, 0, 0, 0b11111, 0, 0, 0],
+        '/' => [0b00001, 0b00010, 0b00100, 0b00100, 0b01000, 0b10000, 0b10000],
+        '!' => [0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0, 0b00100],
+        '.' => [0, 0, 0, 0, 0, 0b01100, 0b01100],
+        '>' => [0b10000, 0b01000, 0b00100, 0b00010, 0b00100, 0b01000, 0b10000],
+        '<' => [0b00001, 0b00010, 0b00100, 0b01000, 0b00100, 0b00010, 0b00001],
+        '[' => [0b01110, 0b01000, 0b01000, 0b01000, 0b01000, 0b01000, 0b01110],
+        ']' => [0b01110, 0b00010, 0b00010, 0b00010, 0b00010, 0b00010, 0b01110],
+        '|' => [0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
+        '=' => [0, 0b11111, 0, 0b11111, 0, 0, 0],
+        '+' => [0, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0],
+        ',' => [0, 0, 0, 0, 0, 0b01100, 0b01000],
+        '(' => [0b00010, 0b00100, 0b01000, 0b01000, 0b01000, 0b00100, 0b00010],
+        ')' => [0b01000, 0b00100, 0b00010, 0b00010, 0b00010, 0b00100, 0b01000],
+        '?' => [0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0, 0b00100],
+        _ => [0b11111, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11111],
     }
 }

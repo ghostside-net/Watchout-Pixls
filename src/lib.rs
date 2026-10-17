@@ -414,6 +414,20 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_window_title_and_text_rendering() {
+        let cfg = RetroWindowConfig::default();
+        assert_eq!(cfg.title, "Watchout Pixls! (v0.1.0)");
+
+        let mut canvas = PixelCanvas::from_config(&cfg);
+        let color = RgbaColor::from_hex(0x4A5859);
+        canvas.draw_text(10, 10, "PLAY", color, 1);
+        let width = PixelCanvas::measure_text_width("PLAY", 1);
+        assert_eq!(width, 4 * 6 - 1);
+        // Letter 'P' has top-left pixel set at (10, 10)
+        assert_eq!(canvas.get_pixel(10, 10), Some(color));
+    }
+
     struct TestCustomMod;
 
     impl ModExtension for TestCustomMod {

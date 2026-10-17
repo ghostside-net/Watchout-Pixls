@@ -102,12 +102,121 @@ impl ApplicationHandler for DesktopAppRunner {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
+        let current_state = self
+            .app
+            .world()
+            .get_resource::<State<crate::state::GameState>>()
+            .map(|s| *s.get())
+            .unwrap_or(crate::state::GameState::MainMenu);
+
         match event {
             WindowEvent::CloseRequested => {
                 event_loop.exit();
             }
+            WindowEvent::MouseInput {
+                state: ElementState::Pressed,
+                ..
+            } => {
+                if current_state == crate::state::GameState::MainMenu {
+                    self.app
+                        .world_mut()
+                        .send_event(StateTransitionAction::StartGame);
+                }
+            }
             WindowEvent::KeyboardInput { event, .. } => {
                 let is_pressed = event.state == ElementState::Pressed;
+
+                // When on the Main Menu, pressing any gameplay or confirm key immediately starts the game
+                if current_state == crate::state::GameState::MainMenu && is_pressed {
+                    match event.physical_key {
+                        PhysicalKey::Code(
+                            KeyCode::Space
+                            | KeyCode::Enter
+                            | KeyCode::KeyW
+                            | KeyCode::KeyS
+                            | KeyCode::KeyA
+                            | KeyCode::KeyD
+                            | KeyCode::ArrowUp
+                            | KeyCode::ArrowDown
+                            | KeyCode::ArrowLeft
+                            | KeyCode::ArrowRight
+                            | KeyCode::KeyE
+                            | KeyCode::KeyJ
+                            | KeyCode::KeyF
+                            | KeyCode::KeyK
+                            | KeyCode::ShiftLeft
+                            | KeyCode::KeyU
+                            | KeyCode::KeyQ,
+                        ) => {
+                            self.app
+                                .world_mut()
+                                .send_event(StateTransitionAction::StartGame);
+                            return;
+                        }
+                        PhysicalKey::Code(KeyCode::Escape) => {
+                            event_loop.exit();
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
+
+                // When Paused, arrow keys and W/S navigate the pause menu, Enter/Space confirms
+                if current_state == crate::state::GameState::Paused && is_pressed {
+                    match event.physical_key {
+                        PhysicalKey::Code(KeyCode::KeyW | KeyCode::ArrowUp) => {
+                            self.app
+                                .world_mut()
+                                .send_event(crate::save_checkpoint::PauseMenuAction::MoveCursor(-1));
+                            return;
+                        }
+                        PhysicalKey::Code(KeyCode::KeyS | KeyCode::ArrowDown) => {
+                            self.app
+                                .world_mut()
+                                .send_event(crate::save_checkpoint::PauseMenuAction::MoveCursor(1));
+                            return;
+                        }
+                        PhysicalKey::Code(KeyCode::Enter | KeyCode::Space) => {
+                            self.app.world_mut().send_event(
+                                crate::save_checkpoint::PauseMenuAction::ConfirmSelection,
+                            );
+                            return;
+                        }
+                        PhysicalKey::Code(KeyCode::KeyP | KeyCode::Escape) => {
+                            self.app
+                                .world_mut()
+                                .send_event(StateTransitionAction::TogglePause);
+                            return;
+                        }
+                        PhysicalKey::Code(KeyCode::Backspace) => {
+                            self.app
+                                .world_mut()
+                                .send_event(StateTransitionAction::ReturnToMainMenu);
+                            return;
+                        }
+                        PhysicalKey::Code(KeyCode::F5) => {
+                            self.app.world_mut().send_event(
+                                crate::save_checkpoint::PauseMenuAction::ManualSave {
+                                    slot: crate::save_checkpoint::MANUAL_SAVE_SLOT_NAME.to_string(),
+                                    file_path: None,
+                                },
+                            );
+                            return;
+                        }
+                        PhysicalKey::Code(KeyCode::F9) => {
+                            self.app.world_mut().send_event(
+                                crate::save_checkpoint::PauseMenuAction::ManualLoad {
+                                    slot: crate::save_checkpoint::MANUAL_SAVE_SLOT_NAME.to_string(),
+                                    file_path: None,
+                                },
+                            );
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Active InGame controls
                 match event.physical_key {
                     PhysicalKey::Code(KeyCode::KeyW | KeyCode::ArrowUp) => {
                         if let Some(mut input) = self
@@ -158,16 +267,11 @@ impl ApplicationHandler for DesktopAppRunner {
                             .send_event(crate::interaction::PlayerInteractEvent);
                     }
                     PhysicalKey::Code(KeyCode::Space) if is_pressed => {
-                        let in_game = self
-                            .app
-                            .world()
-                            .get_resource::<State<crate::state::GameState>>()
-                            .is_some_and(|s| *s.get() == crate::state::GameState::InGame);
-                        if in_game {
-                            if let Some(mut input) =
-                                self.app
-                                    .world_mut()
-                                    .get_resource_mut::<crate::player::PlayerInputState>()
+                        if current_state == crate::state::GameState::InGame {
+                            if let Some(mut input) = self
+                                .app
+                                .world_mut()
+                                .get_resource_mut::<crate::player::PlayerInputState>()
                             {
                                 input.interact_just_pressed = true;
                             }
@@ -227,7 +331,13 @@ impl ApplicationHandler for DesktopAppRunner {
                             .send_event(StateTransitionAction::ReturnToMainMenu);
                     }
                     PhysicalKey::Code(KeyCode::Escape) if is_pressed => {
-                        event_loop.exit();
+                        if current_state == crate::state::GameState::InGame {
+                            self.app
+                                .world_mut()
+                                .send_event(StateTransitionAction::TogglePause);
+                        } else {
+                            event_loop.exit();
+                        }
                     }
                     _ => {}
                 }

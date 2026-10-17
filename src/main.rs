@@ -1,4 +1,4 @@
-//! Main entrypoint for `watchout_pixls` (Phase 1).
+//! Main entrypoint for `watchout_pixls` (Phases 1–4).
 
 use bevy::prelude::*;
 use watchout_pixls::build_watchout_app;

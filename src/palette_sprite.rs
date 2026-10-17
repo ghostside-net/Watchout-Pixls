@@ -7,6 +7,9 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::progression::{CharacterProgression, CombatStats};
+use crate::save_checkpoint::{PauseMenuOption, PauseMenuState};
+use crate::state::{GameState, HeroController};
 use crate::window_render::{PixelCanvas, PixelPerfectCamera2d};
 
 /// Errors related to palette creation or indexed pixel lookup.
@@ -362,8 +365,8 @@ pub struct PaletteVerificationSwatches {
 }
 
 /// System that renders all visible chunks, tiles, palette swatches, and sprites through
-/// the `PixelPerfectCamera2d` onto the native `PixelCanvas`, then executes
-/// strict Nearest-Neighbor integer scaling.
+/// the `PixelPerfectCamera2d` onto the native `PixelCanvas`, overlays title screen / HUD / pause dialog,
+/// then executes strict Nearest-Neighbor integer scaling.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn render_pixel_scene_system(
     palette: Res<PastelGameBoyPalette>,
@@ -379,10 +382,19 @@ pub fn render_pixel_scene_system(
         &PixelSprite,
         Option<&crate::interaction::OverworldPropEntity>,
     )>,
+    current_state: Option<Res<State<GameState>>>,
+    pause_menu: Option<Res<PauseMenuState>>,
+    progression_query: Query<(&CharacterProgression, &CombatStats), With<HeroController>>,
 ) {
+    let c_cream = palette.lookup(0).unwrap_or(RgbaColor::from_hex(0xFAF3E0));
+    let c_sage = palette.lookup(1).unwrap_or(RgbaColor::from_hex(0xB8E0D2));
+    let c_mint = palette.lookup(2).unwrap_or(RgbaColor::from_hex(0x80B9AD));
+    let c_slate = palette.lookup(3).unwrap_or(RgbaColor::from_hex(0x4A5859));
+    let c_lavender = palette.lookup(5).unwrap_or(RgbaColor::from_hex(0xC4A7E7));
+    let c_sun = palette.lookup(6).unwrap_or(RgbaColor::from_hex(0xF9E79F));
+
     // 1. Clear native canvas with Palette Index 0 (Cream Mist)
-    let bg_color = palette.lookup(0).unwrap_or(RgbaColor::BLACK);
-    canvas.clear(bg_color);
+    canvas.clear(c_cream);
 
     let camera = camera_query.iter().next().cloned().unwrap_or_else(|| {
         PixelPerfectCamera2d::new(canvas.native_width(), canvas.native_height())
@@ -446,7 +458,90 @@ pub fn render_pixel_scene_system(
             .blit_to_canvas(&mut canvas, &palette, screen_px.x, screen_px.y);
     }
 
-    // 6. Perform Nearest-Neighbor integer upscaling to physical window buffer
+    // 6. Context-sensitive UI Overlay depending on GameState
+    if let Some(state) = current_state {
+        match *state.get() {
+            GameState::MainMenu => {
+                // Outer decorative border
+                canvas.draw_rect_outline(6, 6, 308, 228, c_slate, 2);
+
+                // Title & Subtitles
+                canvas.draw_text_centered(24, "WATCHOUT PIXLS!", c_slate, 2);
+                canvas.draw_text_centered(46, "A MODULAR 2D RETRO RPG", c_mint, 1);
+                canvas.draw_text_centered(58, "PHASES 1-4 FULLY ACTIVE", c_lavender, 1);
+
+                // Hero pedestal label (hero mascot is at 156, 116)
+                canvas.draw_text_centered(128, "HERO PIXL", c_slate, 1);
+
+                // Action banner
+                canvas.fill_rect(20, 142, 280, 16, c_sage);
+                canvas.draw_text_centered(146, "[ PRESS SPACE, ENTER OR WASD TO START ]", c_slate, 1);
+
+                // Controls overview
+                canvas.draw_text_centered(166, "-- CONTROLS --", c_mint, 1);
+                canvas.draw_text(26, 178, "WASD / ARROWS : MOVE", c_slate, 1);
+                canvas.draw_text(172, 178, "SPACE / E : INTERACT", c_slate, 1);
+                canvas.draw_text(26, 189, "J / F         : ATTACK", c_slate, 1);
+                canvas.draw_text(172, 189, "K / SHIFT : DASH", c_slate, 1);
+                canvas.draw_text(26, 200, "U / Q         : SKILL", c_slate, 1);
+                canvas.draw_text(172, 200, "P         : PAUSE", c_slate, 1);
+                canvas.draw_text(26, 211, "F5: SAVE / F9: LOAD", c_slate, 1);
+                canvas.draw_text(172, 211, "ESC       : QUIT", c_slate, 1);
+
+                canvas.draw_text_centered(224, "v0.1.0 - GPLv3 OPEN-SOURCE ADVENTURE", c_slate, 1);
+            }
+            GameState::InGame => {
+                // Bottom HUD status bar (at y=230..240, keeping world view clear)
+                canvas.fill_rect(0, 230, 320, 10, c_slate);
+                if let Some((prog, stats)) = progression_query.iter().next() {
+                    let wpn = prog
+                        .equipped_weapon_id
+                        .strip_prefix("weapon.")
+                        .unwrap_or(&prog.equipped_weapon_id);
+                    let hud_text = format!(
+                        "HP:{}/{} LV:{} XP:{} WPN:{}",
+                        stats.current_health, stats.max_health, prog.level, prog.current_xp, wpn
+                    );
+                    canvas.draw_text(4, 232, &hud_text, c_cream, 1);
+                } else {
+                    canvas.draw_text(4, 232, "WATCHOUT PIXLS - EXPLORING", c_cream, 1);
+                }
+                canvas.draw_text(242, 232, "P:PAUSE F5:SAVE", c_sun, 1);
+            }
+            GameState::Paused => {
+                // Semi-modal pause menu dialog box
+                canvas.fill_rect(44, 40, 232, 160, c_cream);
+                canvas.draw_rect_outline(44, 40, 232, 160, c_slate, 2);
+
+                canvas.draw_text_centered(48, "=== PAUSE MENU ===", c_slate, 1);
+                canvas.draw_text_centered(60, "GAME SUSPENDED", c_mint, 1);
+
+                if let Some(ref menu) = pause_menu {
+                    for (i, opt) in menu.options.iter().enumerate() {
+                        let is_selected = i == menu.selected_index;
+                        let prefix = if is_selected { "> " } else { "  " };
+                        let label = match opt {
+                            PauseMenuOption::Resume => "RESUME ADVENTURE",
+                            PauseMenuOption::ManualSave => "SAVE GAME (SLOT 1 / F5)",
+                            PauseMenuOption::ManualLoad => "LOAD GAME (SLOT 1 / F9)",
+                            PauseMenuOption::ReturnToMainMenu => "RETURN TO TITLE SCREEN",
+                        };
+                        let opt_color = if is_selected { c_slate } else { c_mint };
+                        let y = 78 + (i as i32) * 14;
+                        if is_selected {
+                            canvas.fill_rect(54, y - 2, 212, 12, c_sage);
+                        }
+                        canvas.draw_text(58, y, &format!("{prefix}{label}"), opt_color, 1);
+                    }
+                    canvas.draw_text_centered(142, &format!("[ {} ]", menu.status_message), c_slate, 1);
+                }
+                canvas.draw_text_centered(162, "W/S: SELECT  ENTER: CONFIRM", c_slate, 1);
+                canvas.draw_text_centered(174, "P / ESC: RESUME GAME", c_slate, 1);
+            }
+        }
+    }
+
+    // 7. Perform Nearest-Neighbor integer upscaling to physical window buffer
     canvas.upscale_nearest_neighbor();
 }
 
