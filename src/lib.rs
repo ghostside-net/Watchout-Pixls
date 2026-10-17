@@ -91,17 +91,25 @@ impl PluginGroup for WatchoutPixlsPlugins {
             .add(Phase3GameplayPlugin);
 
         let mut content_pack_dir: Option<std::path::PathBuf> = None;
-        let cwd_pack = Path::new("assets/content");
-        if cwd_pack.exists() {
-            content_pack_dir = Some(cwd_pack.to_path_buf());
-        } else if let Ok(exe) = std::env::current_exe() {
-            if let Some(exe_dir) = exe.parent() {
-                let exe_relative = exe_dir.join("assets/content");
-                let target_relative = exe_dir.join("../../assets/content");
-                if exe_relative.exists() {
-                    content_pack_dir = Some(exe_relative);
-                } else if target_relative.exists() {
-                    content_pack_dir = Some(target_relative);
+        if let Some(env_dir) = std::env::var_os("WATCHOUT_CONTENT_DIR") {
+            let candidate = std::path::PathBuf::from(env_dir);
+            if candidate.exists() {
+                content_pack_dir = Some(candidate);
+            }
+        }
+        if content_pack_dir.is_none() {
+            let cwd_pack = Path::new("assets/content");
+            if cwd_pack.exists() {
+                content_pack_dir = Some(cwd_pack.to_path_buf());
+            } else if let Ok(exe) = std::env::current_exe() {
+                if let Some(exe_dir) = exe.parent() {
+                    for prefix in [".", "..", "../.."] {
+                        let candidate = exe_dir.join(prefix).join("assets/content");
+                        if candidate.exists() {
+                            content_pack_dir = Some(candidate);
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -1015,5 +1023,13 @@ mod tests {
             fallback.collision_at(fallback.spawn_tile),
             TileCollision::None
         );
+    }
+
+    #[test]
+    fn test_env_configured_paths() {
+        std::env::set_var("WATCHOUT_PREFABS_DIR", "assets/prefabs");
+        let prefab = PrefabLoader::load_from_file("starter_house.ron", None);
+        assert!(prefab.is_ok());
+        std::env::remove_var("WATCHOUT_PREFABS_DIR");
     }
 }

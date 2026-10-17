@@ -953,6 +953,30 @@ fn tile_from_id(tile_id: &str) -> InstanceTile {
     }
 }
 
+fn resolve_prefab_path(path: &Path) -> std::path::PathBuf {
+    if path.exists() || !path.is_relative() {
+        return path.to_path_buf();
+    }
+    if let Some(prefabs_dir) = std::env::var_os("WATCHOUT_PREFABS_DIR") {
+        let filename = path.file_name().unwrap_or(path.as_os_str());
+        let candidate = std::path::PathBuf::from(prefabs_dir).join(filename);
+        if candidate.exists() {
+            return candidate;
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            for prefix in [".", "..", "../.."] {
+                let candidate = exe_dir.join(prefix).join(path);
+                if candidate.exists() {
+                    return candidate;
+                }
+            }
+        }
+    }
+    path.to_path_buf()
+}
+
 /// Stateless loader for deserializing [`PrefabDefinition`]s from RON, JSON, or files on disk.
 pub struct PrefabLoader;
 
@@ -1004,9 +1028,10 @@ impl PrefabLoader {
         registries: Option<&GameContentRegistries>,
     ) -> Result<DungeonState, PrefabError> {
         let path_ref = path.as_ref();
-        let format = DataFormat::from_path(path_ref)
+        let resolved_path = resolve_prefab_path(path_ref);
+        let format = DataFormat::from_path(&resolved_path)
             .map_err(|e| PrefabError::UnsupportedFormat(e.to_string()))?;
-        let raw = fs::read_to_string(path_ref)?;
+        let raw = fs::read_to_string(&resolved_path)?;
         let def = Self::deserialize_definition(&raw, format)?;
         def.build_instance(registries, Some(path_ref.display().to_string()))
     }
